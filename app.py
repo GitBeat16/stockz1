@@ -703,4 +703,73 @@ st.markdown(
     "This tool is designed to help students explore technical analysis concepts."
     "</div>",
     unsafe_allow_html=True,
-)
+)  # your previous file
+
+st.set_page_config(page_title="Stock Backtester", layout="wide")
+
+st.title("📈 Stock Backtesting App")
+
+# ---------------- Sidebar ----------------
+st.sidebar.header("⚙️ Settings")
+
+uploaded_file = st.sidebar.file_uploader("Upload CSV", type=["csv"])
+
+short_window = st.sidebar.slider("Short MA Window", 5, 50, 20)
+long_window = st.sidebar.slider("Long MA Window", 20, 200, 50)
+initial_cash = st.sidebar.number_input("Initial Cash", value=100000)
+
+run_button = st.sidebar.button("🚀 Run Backtest")
+
+# ---------------- Main ----------------
+
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+
+    if 'Close' not in df.columns:
+        st.error("CSV must contain 'Close' column")
+    else:
+        st.subheader("📊 Raw Data")
+        st.dataframe(df.head())
+
+        if run_button:
+            # Run backtest
+            bt = Backtester(df, initial_cash=initial_cash)
+
+            bt.add_indicators(short_window, long_window)
+            bt.generate_signals()
+            bt.run_backtest()
+
+            results = bt.results()
+
+            # ---------------- Results ----------------
+            st.subheader("💰 Results")
+            col1, col2 = st.columns(2)
+
+            col1.metric("Final Portfolio Value", f"{results['Final Portfolio Value']:.2f}")
+            col2.metric("Total Return (%)", f"{results['Total Return (%)']:.2f}%")
+
+            # ---------------- Chart ----------------
+            st.subheader("📈 Portfolio Growth")
+
+            fig, ax = plt.subplots()
+            ax.plot(bt.data['Portfolio_Value'])
+            ax.set_title("Portfolio Value Over Time")
+            ax.set_xlabel("Time")
+            ax.set_ylabel("Value")
+
+            st.pyplot(fig)
+
+            # ---------------- Signals Chart ----------------
+            st.subheader("📉 Price + Signals")
+
+            fig2, ax2 = plt.subplots()
+            ax2.plot(bt.data['Close'], label='Price')
+            ax2.plot(bt.data['MA_short'], label='Short MA')
+            ax2.plot(bt.data['MA_long'], label='Long MA')
+
+            ax2.legend()
+            st.pyplot(fig2)
+
+else:
+    st.info("👈 Upload a CSV file to start")
+
