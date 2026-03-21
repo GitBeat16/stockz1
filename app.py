@@ -118,7 +118,7 @@ html, body, [data-testid="stAppViewContainer"] {{
 # ════════════════════════════════════════════════════════════════════════════
 with st.sidebar:
     st.markdown(f'<div style="text-align:center; padding:1rem;">{SVG_ICONS["Logo"]}</div>', unsafe_allow_html=True)
-    st.markdown("<h2 style='text-align:center; font-size:1.2rem;'>NEURAL TERMINAL</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align:center; font-size:1.2rem;'>StockZ</h2>", unsafe_allow_html=True)
     st.markdown("<div class='scan-line'></div>", unsafe_allow_html=True)
     
     ticker = st.text_input("INSTRUMENT", value="AAPL").upper().strip()
