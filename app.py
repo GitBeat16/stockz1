@@ -5,6 +5,7 @@ import numpy as np
 import time
 import requests
 from streamlit_lottie import st_lottie
+from datetime import datetime
 
 # ── Backend imports ──────────────────────────────────────────────────────────
 try:
@@ -23,6 +24,8 @@ if 'cash_balance' not in st.session_state:
     st.session_state.cash_balance = 100000.0
 if 'portfolio' not in st.session_state:
     st.session_state.portfolio = {}
+if 'trade_history' not in st.session_state:
+    st.session_state.trade_history = []
 if 'current_page' not in st.session_state:
     st.session_state.current_page = "DASHBOARD"
 
@@ -43,7 +46,8 @@ SVG_ICONS = {
     "Wallet": '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"/></svg>',
     "Shield": '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
     "Info": '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" cy="16" x2="12" y2="12"/><line x1="12" cy="8" x2="12.01" y2="8"/></svg>',
-    "Settings": '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'
+    "Settings": '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+    "History": '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
 }
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -93,7 +97,6 @@ st.markdown(f"""
 .value {{ font-size: 1.75rem; font-weight: 800; margin-top: 0.25rem; color: #f8fafc; }}
 .mono {{ font-family: 'JetBrains Mono', monospace; }}
 
-/* Style for Nav Buttons to look like text links */
 .stButton > button {{
     border-radius: 12px !important;
     background: transparent !important;
@@ -111,14 +114,6 @@ st.markdown(f"""
     background: rgba(59, 130, 246, 0.1) !important;
 }}
 
-/* Active button style */
-.active-nav > div > button {{
-    color: #fff !important;
-    border: 1px solid rgba(59, 130, 246, 0.3) !important;
-    background: rgba(59, 130, 246, 0.2) !important;
-}}
-
-/* Trade buttons need specific coloring */
 .trade-btn > div > button {{
     background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
     color: white !important;
@@ -170,7 +165,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Nav Button Logic (Placed right under the header)
 c1, c2, c3, c4 = st.columns([1, 1, 1, 5])
 with c1:
     if st.button("DASHBOARD", use_container_width=True):
@@ -204,14 +198,12 @@ if st.session_state.current_page == "DASHBOARD":
             info = get_ticker_info(ticker)
             st.session_state.last_df, st.session_state.last_info, st.session_state.last_ticker = df, info, ticker
 
-    # Data Extraction
     df, info, active_ticker = st.session_state.last_df, st.session_state.last_info, st.session_state.last_ticker
     stats_all = analyse_all_patterns(df)
     latest_patterns = get_latest_patterns(df)
     latest_close = float(df["Close"].iloc[-1])
     primary = latest_patterns[0] if latest_patterns else None
 
-    # Header
     st.markdown(f"""
         <div style='margin-bottom:2rem;'>
             <div class='label'><span class='live-dot'></span> {info['sector']} • LIVE FEED</div>
@@ -219,7 +211,6 @@ if st.session_state.current_page == "DASHBOARD":
         </div>
     """, unsafe_allow_html=True)
 
-    # KPI Grid
     c1, c2, c3, c4 = st.columns(4)
     with c1: st.markdown(f'<div class="quant-card"><div class="label">Last Price</div><div class="value mono">${latest_close:,.2f}</div></div>', unsafe_allow_html=True)
     with c2: st.markdown(f'<div class="quant-card"><div class="label">Paper Money</div><div class="value mono" style="color:#10b981;">${st.session_state.cash_balance:,.2f}</div></div>', unsafe_allow_html=True)
@@ -228,13 +219,11 @@ if st.session_state.current_page == "DASHBOARD":
         total_val = st.session_state.cash_balance + sum([v * latest_close for v in st.session_state.portfolio.values()])
         st.markdown(f'<div class="quant-card"><div class="label">Total Equity</div><div class="value mono">${total_val:,.0f}</div></div>', unsafe_allow_html=True)
 
-    # Charting
     fig = go.Figure(data=[go.Candlestick(x=df.tail(100).index, open=df.tail(100)['Open'], high=df.tail(100)['High'], low=df.tail(100)['Low'], close=df.tail(100)['Close'], 
                     increasing_line_color='#10b981', decreasing_line_color='#ef4444')])
     fig.update_layout(template="plotly_dark", height=450, margin=dict(l=0,r=0,t=0,b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
     st.plotly_chart(fig, use_container_width=True)
 
-    # Trade Execution
     st.markdown("<div style='margin-top:2rem;' class='label'>Order Execution Engine</div>", unsafe_allow_html=True)
     trade_col1, trade_col2 = st.columns([2, 1])
     with trade_col1:
@@ -252,6 +241,13 @@ if st.session_state.current_page == "DASHBOARD":
                 if st.session_state.cash_balance >= cost:
                     st.session_state.cash_balance -= cost
                     st.session_state.portfolio[active_ticker] = st.session_state.portfolio.get(active_ticker, 0) + qty
+                    st.session_state.trade_history.append({
+                        "time": datetime.now().strftime("%H:%M:%S"),
+                        "symbol": active_ticker,
+                        "type": "BUY",
+                        "qty": qty,
+                        "price": latest_close
+                    })
                     st.success(f"Filled: +{qty} {active_ticker}")
                     time.sleep(1)
                     st.rerun()
@@ -263,6 +259,13 @@ if st.session_state.current_page == "DASHBOARD":
                 if st.session_state.portfolio.get(active_ticker, 0) >= qty:
                     st.session_state.cash_balance += (qty * latest_close)
                     st.session_state.portfolio[active_ticker] -= qty
+                    st.session_state.trade_history.append({
+                        "time": datetime.now().strftime("%H:%M:%S"),
+                        "symbol": active_ticker,
+                        "type": "SELL",
+                        "qty": qty,
+                        "price": latest_close
+                    })
                     st.warning(f"Filled: -{qty} {active_ticker}")
                     time.sleep(1)
                     st.rerun()
@@ -278,7 +281,6 @@ if st.session_state.current_page == "DASHBOARD":
         st.markdown(f'<div class="label" style="margin-top:15px;">Market Value</div><div class="value mono" style="font-size:1.4rem; color:#10b981;">${pos * latest_close:,.2f}</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Stats Grid
     st.markdown("<div style='margin-top:3rem;' class='label'>Historical Performance Analysis</div>", unsafe_allow_html=True)
     cols = st.columns(len(stats_all))
     for i, (name, stats) in enumerate(stats_all.items()):
@@ -292,11 +294,12 @@ elif st.session_state.current_page == "PORTFOLIO":
     with col_stat1:
         st.markdown(f'<div class="quant-card"><div class="label">Liquid Cash</div><div class="value mono" style="color:#10b981;">${st.session_state.cash_balance:,.2f}</div></div>', unsafe_allow_html=True)
     
+    # ── Active Positions ──────────────────────────────────────────────────
     st.markdown('<div class="quant-card">', unsafe_allow_html=True)
+    st.markdown(f'<div class="label" style="margin-bottom:15px;">{SVG_ICONS["Shield"]} Open Positions</div>', unsafe_allow_html=True)
     if not st.session_state.portfolio or sum(st.session_state.portfolio.values()) == 0:
         st.info("No active positions in session state.")
     else:
-        # Display as a clean list
         for ticker, qty in st.session_state.portfolio.items():
             if qty > 0:
                 st.markdown(f"""
@@ -305,6 +308,29 @@ elif st.session_state.current_page == "PORTFOLIO":
                     <span class="mono" style="color:#fff;">{qty} Shares</span>
                 </div>
                 """, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── Trade History ─────────────────────────────────────────────────────
+    st.markdown("<div class='label' style='margin-top:2rem;'>Activity Log</div><h2 style='color:white;'>Trade History</h2>", unsafe_allow_html=True)
+    st.markdown('<div class="quant-card">', unsafe_allow_html=True)
+    st.markdown(f'<div class="label" style="margin-bottom:15px;">{SVG_ICONS["History"]} Recent Executions</div>', unsafe_allow_html=True)
+    
+    if not st.session_state.trade_history:
+        st.markdown("<p style='color:#64748b;' class='mono'>No trades executed in this session.</p>", unsafe_allow_html=True)
+    else:
+        # Displaying history in reverse (newest first)
+        for trade in reversed(st.session_state.trade_history):
+            color = "#10b981" if trade['type'] == "BUY" else "#ef4444"
+            st.markdown(f"""
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div>
+                    <span class="mono" style="color:#64748b; font-size:0.8rem; margin-right:15px;">[{trade['time']}]</span>
+                    <span class="mono" style="font-weight:700; color:{color};">{trade['type']}</span>
+                    <span class="mono" style="color:#fff; margin-left:10px;">{trade['qty']} {trade['symbol']}</span>
+                </div>
+                <div class="mono" style="color:#94a3b8;">@ ${trade['price']:,.2f}</div>
+            </div>
+            """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 elif st.session_state.current_page == "SETTINGS":
@@ -320,6 +346,7 @@ elif st.session_state.current_page == "SETTINGS":
     if st.button("HARD RESET TERMINAL"):
         st.session_state.cash_balance = 100000.0
         st.session_state.portfolio = {}
+        st.session_state.trade_history = []
         st.session_state.current_page = "DASHBOARD"
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
