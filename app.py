@@ -6,7 +6,7 @@ import time
 import requests
 from streamlit_lottie import st_lottie
 
-# ── Backend imports ──────────────────────────────────────────────────────────
+# ── Backend imports (Ensure these files exist in your directory) ──────────────
 try:
     from data_loader      import load_stock_data, get_ticker_info
     from pattern_detector import get_latest_patterns, PATTERNS
@@ -114,7 +114,7 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # Persistent Account Visibility
+    # Persistent Sidebar Wallet
     st.markdown(f'<div class="label">{SVG_ICONS["Wallet"]} PAPER BALANCE</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="value mono" style="font-size:1.5rem; color:#10b981;">${st.session_state.cash_balance:,.2f}</div>', unsafe_allow_html=True)
     
@@ -130,6 +130,22 @@ with st.sidebar:
 # ════════════════════════════════════════════════════════════════════════════
 # 5. MAIN UI LOGIC
 # ════════════════════════════════════════════════════════════════════════════
+# Top Navigation Bar
+st.markdown(f"""
+<div style="display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.8); padding: 10px 20px; border-bottom: 1px solid rgba(59, 130, 246, 0.2); margin-bottom: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+    <div style="display: flex; gap: 20px; align-items: center;">
+        <span style="color: #3b82f6; font-weight: 800; font-family: 'JetBrains Mono';">{SVG_ICONS["Logo"]}</span>
+        <span class="label" style="color: #fff; cursor: pointer;">DASHBOARD</span>
+        <span class="label" style="cursor: pointer;">PORTFOLIO</span>
+        <span class="label" style="cursor: pointer;">SETTINGS</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <div class="live-dot"></div>
+        <span class="label" style="color: #10b981;">CORE_STABLE</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
 if not analyse and 'last_df' not in st.session_state:
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
@@ -222,11 +238,21 @@ with trade_col2:
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ════════════════════════════════════════════════════════════════════════════
-# 7. SYSTEM PROTOCOLS & USER GUIDE
+# 7. PERFORMANCE & SYSTEM PROTOCOLS
 # ════════════════════════════════════════════════════════════════════════════
-st.markdown("<div style='margin-top:3rem;' class='label'>Protocol Overview</div>", unsafe_allow_html=True)
+st.markdown("<div style='margin-top:3rem;' class='label'>Historical Performance Analysis</div>", unsafe_allow_html=True)
+cols = st.columns(len(stats_all))
+for i, (name, stats) in enumerate(stats_all.items()):
+    with cols[i]:
+        st.markdown(f"""
+        <div class="quant-card">
+            <div class="label" style="color:#3b82f6">{name}</div>
+            <div style="font-size:1.4rem; font-weight:700; margin:0.5rem 0;">{stats['win_rate']}% <span class="label">Win Rate</span></div>
+            <div class="label">Avg Return: {stats['avg_return']:.2f}%</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-with st.expander("OPEN SYSTEM DOCUMENTATION", expanded=False):
+with st.expander("SYSTEM PROTOCOLS & USER GUIDE", expanded=False):
     g1, g2, g3 = st.columns(3)
     with g1:
         st.markdown(f"""
@@ -252,6 +278,6 @@ with st.expander("OPEN SYSTEM DOCUMENTATION", expanded=False):
                 {SVG_ICONS['Info']} <span style="font-weight:700; color:#f8fafc;">Risk Level</span>
             </div>
             <p style="font-size: 0.85rem; color: #94a3b8; line-height: 1.4;">
-                Risk Profile: {risk_pct}%. Position sizing is relative to total equity.
+                Risk Profile: {risk_pct}%. Position sizing is relative to total portfolio equity.
             </p>
         """, unsafe_allow_html=True)
