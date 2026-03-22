@@ -30,7 +30,8 @@ SVG_ICONS = {
     "Default": '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',
     "Logo": '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 3V21H21" stroke="url(#paint0_linear)" stroke-width="2" stroke-linecap="round"/><path d="M7 14L11 10L15 14L20 9" stroke="url(#paint1_linear)" stroke-width="2" stroke-linecap="round"/><defs><linearGradient id="paint0_linear" x1="3" y1="3" x2="21" y2="21" gradientUnits="userSpaceOnUse"><stop stop-color="#3B82F6"/><stop offset="1" stop-color="#10B981"/></linearGradient><linearGradient id="paint1_linear" x1="7" y1="14" x2="20" y2="9" gradientUnits="userSpaceOnUse"><stop stop-color="#60A5FA"/><stop offset="1" stop-color="#34D399"/></linearGradient></defs></svg>',
     "Wallet": '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"/></svg>',
-    "Shield": '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
+    "Shield": '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+    "Info": '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>'
 }
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -43,6 +44,7 @@ html, body, [data-testid="stAppViewContainer"] {{ font-family: 'Plus Jakarta San
 .quant-card {{ background: linear-gradient(145deg, rgba(30, 41, 59, 0.4), rgba(15, 23, 42, 0.4)); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 12px; padding: 1.5rem; height: 100%; }}
 .portfolio-box {{ background: rgba(30, 41, 59, 0.3); border: 1px dashed #334155; border-radius: 10px; padding: 12px; margin-bottom: 20px; }}
 .risk-panel {{ background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; }}
+.guide-panel {{ background: rgba(30, 41, 59, 0.2); border: 1px solid #1e293b; border-radius: 12px; padding: 2rem; margin-top: 3rem; }}
 .mono {{ font-family: 'JetBrains Mono', monospace; }}
 .label {{ font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }}
 .value {{ font-size: 1.75rem; font-weight: 800; margin-top: 0.25rem; }}
@@ -95,9 +97,8 @@ primary = latest_patterns[0] if latest_patterns else None
 shares_owned = st.session_state.portfolio.get(active_ticker, 0)
 
 # ── RISK CALCULATION ENGINE ──
-# Stop Loss set at the low of the current candle (for bullish) or high (bearish)
 current_low = float(df["Low"].iloc[-1])
-stop_loss = current_low * 0.995 # 0.5% buffer below low
+stop_loss = current_low * 0.995 
 risk_per_share = latest_close - stop_loss
 dollar_risk = st.session_state.cash_balance * (risk_pct / 100)
 suggested_shares = int(dollar_risk / risk_per_share) if risk_per_share > 0 else 0
@@ -166,5 +167,33 @@ for name, stats in stats_all.items():
         m1.markdown(f"<div class='label'>Signals</div><div class='mono'>{stats['occurrences']}</div>", unsafe_allow_html=True)
         m2.markdown(f"<div class='label'>Win Rate</div><div class='mono'>{stats['win_rate']}%</div>", unsafe_allow_html=True)
         m3.markdown(f"<div class='label'>Avg 3D Return</div><div class='mono'>{stats['avg_return']:.2f}%</div>", unsafe_allow_html=True)
+
+# ════════════════════════════════════════════════════════════════════════════
+# 6. PRODUCT GUIDE (NEW SECTION)
+# ════════════════════════════════════════════════════════════════════════════
+st.markdown(f"""
+<div class="guide-panel">
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:1.5rem;">
+        {SVG_ICONS['Info']}
+        <span style="font-weight:800; font-size:1.1rem; letter-spacing:0.05em;">TERMINAL USER GUIDE</span>
+    </div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
+        <div style="font-size:0.85rem; color:#94a3b8;">
+            <p style="color:#f8fafc; font-weight:600; margin-bottom:8px;">1. SCANNING & ANALYSIS</p>
+            Enter a ticker (e.g., AAPL) in the sidebar and click <b>EXECUTE ANALYSIS</b>. The system scans historical price action to identify technical candlestick patterns.
+            <br><br>
+            <p style="color:#f8fafc; font-weight:600; margin-bottom:8px;">2. RISK MANAGEMENT</p>
+            Adjust the <b>Risk Per Trade (%)</b> slider. The terminal automatically calculates your suggested share size based on your current balance and a technical Stop Loss (SL) set below the recent low.
+        </div>
+        <div style="font-size:0.85rem; color:#94a3b8;">
+            <p style="color:#f8fafc; font-weight:600; margin-bottom:8px;">3. QUANT INSIGHTS</p>
+            View backtested win rates for every detected pattern. The AI breakdown provides a statistical probability of success based on the last 5 years of historical data for that specific instrument.
+            <br><br>
+            <p style="color:#f8fafc; font-weight:600; margin-bottom:8px;">4. EXECUTION</p>
+            Use the <b>QUANT SIZE</b> button to simulate a trade. Your "Net Worth" tracks the combined value of your cash and active stock positions in real-time.
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 st.markdown("<div style='text-align:center; padding:4rem 0; color:#334155; font-size:0.65rem;'>QUANT ANALYZER CORE v5.0 • POSITION SIZER ENABLED</div>", unsafe_allow_html=True)
