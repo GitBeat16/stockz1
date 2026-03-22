@@ -159,17 +159,31 @@ with col_right:
         st.markdown(f"<div style='background:rgba(30,41,59,0.3); padding:1.2rem; border-radius:12px; border-left:4px solid #3b82f6;'><div class='label' style='color:#3b82f6;'>Quant Insight</div><div style='font-size:0.85rem; line-height:1.6; color:#cbd5e1'>{build_ai_explanation(primary, stats_all[primary])}</div></div>", unsafe_allow_html=True)
     else: st.markdown('<div style="padding:2rem; text-align:center; color:#475569;">No patterns detected</div>', unsafe_allow_html=True)
 
-# ── Backtest Stats ──
-st.markdown("<div style='height:40px'></div><div class='label'>Historical Performance</div>", unsafe_allow_html=True)
+# ── ADVANCED BACKTEST STATS ──
+st.markdown("<div style='height:40px'></div><div class='label'>Quant Performance Metrics</div>", unsafe_allow_html=True)
 for name, stats in stats_all.items():
-    with st.expander(f"{name} Backtest"):
-        m1, m2, m3 = st.columns(3)
+    with st.expander(f"{name} Analysis"):
+        m1, m2, m3, m4 = st.columns(4)
+        
+        # 1. Occurrence Tracking
         m1.markdown(f"<div class='label'>Signals</div><div class='mono'>{stats['occurrences']}</div>", unsafe_allow_html=True)
-        m2.markdown(f"<div class='label'>Win Rate</div><div class='mono'>{stats['win_rate']}%</div>", unsafe_allow_html=True)
-        m3.markdown(f"<div class='label'>Avg 3D Return</div><div class='mono'>{stats['avg_return']:.2f}%</div>", unsafe_allow_html=True)
+        
+        # 2. Win Rate
+        m2.markdown(f"<div class='label'>Win Rate</div><div class='mono' style='color:#10b981'>{stats['win_rate']}%</div>", unsafe_allow_html=True)
+        
+        # 3. Average Return (Alpha)
+        avg_r = stats.get('avg_return', 0)
+        m3.markdown(f"<div class='label'>Avg 3D Edge</div><div class='mono'>{avg_r:+.2f}%</div>", unsafe_allow_html=True)
+        
+        # 4. Expectancy (E = (W * AvgW) - (L * AvgL))
+        # Logic: Estimate Loss as 50% of the gain for rough expectancy modeling
+        expectancy = (stats['win_rate']/100 * avg_r) - ((1 - stats['win_rate']/100) * abs(avg_r * 0.5))
+        m4.markdown(f"<div class='label'>Expectancy</div><div class='mono' style='color:{'#10b981' if expectancy > 0 else '#ef4444'}'>{expectancy:.2f}R</div>", unsafe_allow_html=True)
+        
+        st.progress(stats['win_rate'] / 100)
 
 # ════════════════════════════════════════════════════════════════════════════
-# 6. PRODUCT GUIDE (NEW SECTION)
+# 6. PRODUCT GUIDE
 # ════════════════════════════════════════════════════════════════════════════
 st.markdown(f"""
 <div class="guide-panel">
@@ -180,17 +194,17 @@ st.markdown(f"""
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
         <div style="font-size:0.85rem; color:#94a3b8;">
             <p style="color:#f8fafc; font-weight:600; margin-bottom:8px;">1. SCANNING & ANALYSIS</p>
-            Enter a ticker (e.g., AAPL) in the sidebar and click <b>EXECUTE ANALYSIS</b>. The system scans historical price action to identify technical candlestick patterns.
+            Enter a ticker in the sidebar and click <b>EXECUTE ANALYSIS</b>. The system scans the chart for technical patterns like Hammers or Engulfing candles.
             <br><br>
             <p style="color:#f8fafc; font-weight:600; margin-bottom:8px;">2. RISK MANAGEMENT</p>
-            Adjust the <b>Risk Per Trade (%)</b> slider. The terminal automatically calculates your suggested share size based on your current balance and a technical Stop Loss (SL) set below the recent low.
+            The terminal calculates a technical <b>Stop Loss</b> based on the pattern low. Use the slider to define what % of your total cash you are willing to lose on one trade.
         </div>
         <div style="font-size:0.85rem; color:#94a3b8;">
-            <p style="color:#f8fafc; font-weight:600; margin-bottom:8px;">3. QUANT INSIGHTS</p>
-            View backtested win rates for every detected pattern. The AI breakdown provides a statistical probability of success based on the last 5 years of historical data for that specific instrument.
+            <p style="color:#f8fafc; font-weight:600; margin-bottom:8px;">3. PERFORMANCE PARAMETERS</p>
+            <b>Expectancy:</b> The projected return per dollar risked. Values > 0 indicate a mathematically profitable strategy over time.
             <br><br>
             <p style="color:#f8fafc; font-weight:600; margin-bottom:8px;">4. EXECUTION</p>
-            Use the <b>QUANT SIZE</b> button to simulate a trade. Your "Net Worth" tracks the combined value of your cash and active stock positions in real-time.
+            The <b>QUANT SIZE</b> button fills your order using the suggested shares. Tracking "Net Worth" allows you to see the real-time impact of volatility on your portfolio.
         </div>
     </div>
 </div>
