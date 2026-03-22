@@ -16,16 +16,12 @@ from pattern_analysis import analyse_all_patterns, build_ai_explanation
 # ════════════════════════════════════════════════════════════════════════════
 st.set_page_config(page_title="Terminal | AI Pattern Analyzer", layout="wide", initial_sidebar_state="expanded")
 
-# Robust Lottie Loader to prevent API Crashes
 def load_lottieurl(url: str):
-    try:
-        r = requests.get(url, timeout=5)
-        if r.status_code != 200: return None
-        return r.json()
-    except: return None
+    r = requests.get(url)
+    if r.status_code != 200: return None
+    return r.json()
 
-# Using a stable Lottie Host URL
-lottie_scan = load_lottieurl("https://lottie.host/86877843-085e-4977-8321-72f1279a5015/GvAonT49u6.json")
+lottie_scan = load_lottieurl("https://assets10.lottiefiles.com/packages/lf20_ghp9v062.json") # Scanning animation
 
 if 'cash_balance' not in st.session_state:
     st.session_state.cash_balance = 100000.0
@@ -48,16 +44,63 @@ SVG_ICONS = {
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
-html, body, [data-testid="stAppViewContainer"] {{ font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #f8fafc; }}
-.quant-card {{ background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 1.5rem; transition: all 0.3s; animation: fadeIn 0.8s ease-out; }}
-.quant-card:hover {{ transform: translateY(-5px); border-color: #3b82f6; }}
-.live-dot {{ height: 8px; width: 8px; background-color: #10b981; border-radius: 50%; display: inline-block; margin-right: 8px; animation: pulse 2s infinite; }}
-@keyframes pulse {{ 0% {{ opacity: 1; }} 50% {{ opacity: 0.3; }} 100% {{ opacity: 1; }} }}
-@keyframes fadeIn {{ from {{ opacity: 0; transform: translateY(10px); }} to {{ opacity: 1; transform: translateY(0); }} }}
+
+/* Main Background */
+[data-testid="stAppViewContainer"] {{
+    background: radial-gradient(circle at top right, #0f172a, #020617);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}}
+
+/* Glassmorphism Cards with Entrance Animation */
+.quant-card {{
+    background: rgba(30, 41, 59, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    animation: fadeIn 0.8s ease-out;
+}}
+
+.quant-card:hover {{
+    transform: translateY(-5px);
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+}}
+
+/* Pulsing Live Indicator */
+.live-dot {{
+    height: 8px;
+    width: 8px;
+    background-color: #10b981;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 1);
+    animation: pulse-green 2s infinite;
+}}
+
+@keyframes pulse-green {{
+    0% {{ transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }}
+    70% {{ transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }}
+    100% {{ transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }}
+}}
+
+@keyframes fadeIn {{
+    from {{ opacity: 0; transform: translateY(20px); }}
+    to {{ opacity: 1; transform: translateY(0); }}
+}}
+
 .label {{ font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }}
-.value {{ font-size: 1.75rem; font-weight: 800; margin-top: 0.25rem; }}
+.value {{ font-size: 1.75rem; font-weight: 800; margin-top: 0.25rem; color: #f8fafc; }}
 .mono {{ font-family: 'JetBrains Mono', monospace; }}
-.guide-panel {{ background: rgba(30, 41, 59, 0.2); border: 1px solid #1e293b; border-radius: 12px; padding: 2rem; margin-top: 3rem; }}
+
+/* Custom Button */
+.stButton > button {{
+    border-radius: 12px !important;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+    transition: 0.4s !important;
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -66,28 +109,34 @@ html, body, [data-testid="stAppViewContainer"] {{ font-family: 'Plus Jakarta San
 # ════════════════════════════════════════════════════════════════════════════
 with st.sidebar:
     st.markdown(f'<div style="text-align:center; padding:1rem;">{SVG_ICONS["Logo"]}</div>', unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align:center; font-size:1.2rem; margin-bottom:2rem;'>StockZ Terminal</h2>", unsafe_allow_html=True)
+    
     ticker = st.text_input("INSTRUMENT", value="AAPL").upper().strip()
     period = st.selectbox("HISTORY", options=["6mo", "1y", "2y", "5y"], index=1)
     risk_pct = st.slider("Risk Per Trade (%)", 0.5, 5.0, 1.0, 0.5)
+    
+    st.markdown("---")
     analyse = st.button("RUN ENGINE SCAN")
 
 # ════════════════════════════════════════════════════════════════════════════
-# 5. MAIN UI LOGIC
+# 5. MAIN UI LOGIC WITH ANIMATION
 # ════════════════════════════════════════════════════════════════════════════
 if not analyse and 'last_df' not in st.session_state:
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
-        if lottie_scan: st_lottie(lottie_scan, height=300, key="initial")
-        else: st.markdown(f'<div style="text-align:center; padding:5rem 0;">{SVG_ICONS["Logo"]}</div>', unsafe_allow_html=True)
+        st_lottie(lottie_scan, height=300, key="initial")
         st.markdown("<p style='text-align:center; color:#64748b;' class='mono'>SYSTEM READY. AWAITING INPUT...</p>", unsafe_allow_html=True)
     st.stop()
 
 if analyse:
     with st.spinner("Decoding Market Fractals..."):
+        # Simulated "Analysis" time for dramatic effect
+        time.sleep(1.2)
         df = load_stock_data(ticker, period)
         info = get_ticker_info(ticker)
         st.session_state.last_df, st.session_state.last_info, st.session_state.last_ticker = df, info, ticker
 
+# Extract Data
 df, info, active_ticker = st.session_state.last_df, st.session_state.last_info, st.session_state.last_ticker
 stats_all = analyse_all_patterns(df)
 latest_patterns = get_latest_patterns(df)
@@ -96,52 +145,49 @@ daily_chg = (latest_close - float(df["Close"].iloc[-2])) / float(df["Close"].ilo
 primary = latest_patterns[0] if latest_patterns else None
 
 # Header
-st.markdown(f"<div><div class='label'><span class='live-dot'></span>{info['sector']}</div><div style='font-size:2.5rem; font-weight:800;'>{info['name']} <span style='color:#3b82f6' class='mono'>{active_ticker}</span></div></div>", unsafe_allow_html=True)
+st.markdown(f"""
+    <div style='margin-bottom:2rem;'>
+        <div class='label'><span class='live-dot'></span> {info['sector']} • LIVE FEED</div>
+        <div style='font-size:2.8rem; font-weight:800; letter-spacing:-0.02em;'>{info['name']} <span style='color:#3b82f6' class='mono'>{active_ticker}</span></div>
+    </div>
+""", unsafe_allow_html=True)
 
 # KPI Grid
 c1, c2, c3, c4 = st.columns(4)
-with c1: st.markdown(f'<div class="quant-card"><div class="label">Price</div><div class="value mono">{latest_close:,.2f}</div></div>', unsafe_allow_html=True)
-with c2: st.markdown(f'<div class="quant-card"><div class="label">24H Delta</div><div class="value mono" style="color:{"#10b981" if daily_chg >=0 else "#ef4444"}">{daily_chg:.2f}%</div></div>', unsafe_allow_html=True)
-with c3: st.markdown(f'<div class="quant-card"><div class="label">Active Pattern</div><div class="value" style="font-size:1.2rem; color:#3b82f6;">{primary if primary else "NONE"}</div></div>', unsafe_allow_html=True)
+with c1: st.markdown(f'<div class="quant-card"><div class="label">Last Traded</div><div class="value mono">${latest_close:,.2f}</div></div>', unsafe_allow_html=True)
+with c2: st.markdown(f'<div class="quant-card"><div class="label">Session Change</div><div class="value mono" style="color:{"#10b981" if daily_chg >=0 else "#ef4444"}">{daily_chg:+.2f}%</div></div>', unsafe_allow_html=True)
+with c3: st.markdown(f'<div class="quant-card"><div class="label">Pattern Signal</div><div class="value" style="font-size:1.2rem; color:#3b82f6;">{primary if primary else "NEUTRAL"}</div></div>', unsafe_allow_html=True)
 with c4:
     total_val = st.session_state.cash_balance + sum([v * latest_close for v in st.session_state.portfolio.values()])
-    st.markdown(f'<div class="quant-card"><div class="label">Net Worth</div><div class="value mono">${total_val:,.0f}</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="quant-card"><div class="label">Total Equity</div><div class="value mono">${total_val:,.0f}</div></div>', unsafe_allow_html=True)
 
-# Chart
+# Charting
 st.markdown("<div style='height:30px'></div>", unsafe_allow_html=True)
-chart_df = df.tail(120)
-fig = go.Figure(data=[go.Candlestick(x=chart_df.index, open=chart_df['Open'], high=chart_df['High'], low=chart_df['Low'], close=chart_df['Close'], increasing_line_color='#10b981', decreasing_line_color='#ef4444')])
-fig.update_layout(template="plotly_dark", height=450, margin=dict(l=0, r=0, t=0, b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis_rangeslider_visible=False)
+chart_df = df.tail(100)
+fig = go.Figure(data=[go.Candlestick(x=chart_df.index, open=chart_df['Open'], high=chart_df['High'], low=chart_df['Low'], close=chart_df['Close'], 
+    increasing_line_color='#10b981', decreasing_line_color='#ef4444')])
+fig.update_layout(template="plotly_dark", height=500, margin=dict(l=0,r=0,t=0,b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
 st.plotly_chart(fig, use_container_width=True)
 
-# ── ADVANCED BACKTEST STATS ──
-st.markdown("<div style='height:40px'></div><div class='label'>Quant Performance Metrics</div>", unsafe_allow_html=True)
-for name, stats in stats_all.items():
-    with st.expander(f"{name} Analysis"):
-        m1, m2, m3, m4 = st.columns(4)
-        m1.markdown(f"<div class='label'>Signals</div><div class='mono'>{stats['occurrences']}</div>", unsafe_allow_html=True)
-        m2.markdown(f"<div class='label'>Win Rate</div><div class='mono' style='color:#10b981'>{stats['win_rate']}%</div>", unsafe_allow_html=True)
-        avg_r = stats.get('avg_return', 0)
-        m3.markdown(f"<div class='label'>Avg 3D Edge</div><div class='mono'>{avg_r:+.2f}%</div>", unsafe_allow_html=True)
-        expectancy = (stats['win_rate']/100 * avg_r) - ((1 - stats['win_rate']/100) * abs(avg_r * 0.5))
-        m4.markdown(f"<div class='label'>Expectancy</div><div class='mono' style='color:{'#10b981' if expectancy > 0 else '#ef4444'}'>{expectancy:.2f}R</div>", unsafe_allow_html=True)
-        st.progress(stats['win_rate'] / 100)
+# Backtest Performance Metrics
+st.markdown("<div style='margin-top:3rem;' class='label'>Historical Backtest Metrics</div>", unsafe_allow_html=True)
+cols = st.columns(len(stats_all))
+for i, (name, stats) in enumerate(stats_all.items()):
+    with cols[i]:
+        st.markdown(f"""
+        <div class="quant-card">
+            <div class="label" style="color:#3b82f6">{name}</div>
+            <div style="font-size:1.4rem; font-weight:700; margin:0.5rem 0;">{stats['win_rate']}% <span class="label">Win Rate</span></div>
+            <div class="label">Avg Return: {stats['avg_return']:.2f}%</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-# ── PRODUCT GUIDE ──
+# Guide (at footer)
 st.markdown(f"""
 <div class="guide-panel">
-    <div style="display:flex; align-items:center; gap:12px; margin-bottom:1.5rem;">{SVG_ICONS['Info']} <span style="font-weight:800; font-size:1.1rem;">TERMINAL USER GUIDE</span></div>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
-        <div style="font-size:0.85rem; color:#94a3b8;">
-            <p style="color:#f8fafc; font-weight:600;">1. SCANNING</p>
-            The engine scans historical data for technical price action patterns. A "Hammer" or "Engulfing" candle identifies potential institutional shifts.
-        </div>
-        <div style="font-size:0.85rem; color:#94a3b8;">
-            <p style="color:#f8fafc; font-weight:600;">2. QUANT METRICS</p>
-            <b>Expectancy (R):</b> Projected return per dollar risked. <b>Win Rate:</b> The historical frequency of profit over a 3-day holding period.
-        </div>
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">{SVG_ICONS['Info']} <span class="label" style="color:#fff">System Protocol</span></div>
+    <div style="font-size:0.8rem; color:#64748b; line-height:1.6;">
+        Data is updated every 60 seconds. Pattern detection uses a 120-day lookback window. Risk management suggests share sizing based on local volatility minimums.
     </div>
 </div>
 """, unsafe_allow_html=True)
-
-st.markdown("<div style='text-align:center; padding:4rem 0; color:#334155; font-size:0.65rem;'>QUANT ANALYZER CORE v5.0 • ANIMATION ENGINE ENABLED</div>",
