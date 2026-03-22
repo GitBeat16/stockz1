@@ -1,121 +1,60 @@
-# 🕯️ Candlestick Pattern Analyser
+<img src="https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.x/svgs/solid/chart-line.svg" width="32" height="32" /> StockZ Terminal
+StockZ Terminal is a high-fidelity quantitative trading dashboard built with Streamlit. It merges real-time market data visualization with automated fractal pattern recognition and a simulated order execution engine.
 
-An educational Streamlit app that detects candlestick patterns in stock data
-and shows whether those patterns have historically been profitable.
+Designed with a "Quant-Noir" aesthetic, the terminal provides a seamless interface for technical analysis, news sentiment tracking, and portfolio management.
 
----
+⚡ Key Features
+Fractal Pattern Engine: Automatically decodes market structures (Bullish Engulfing, Hammers, etc.) using historical OHLCV data.
 
-## Project Structure
+Live Order Execution: A fully functional paper trading system with session-state persistence for tracking cash balances and positions.
 
-```
-candlestick_ai/
-├── app.py               # Streamlit UI
-├── data_loader.py       # Yahoo Finance data fetching
-├── pattern_detector.py  # TA-Lib pattern detection (with pure-Python fallback)
-├── pattern_analysis.py  # Historical profitability stats
-├── requirements.txt
-└── README.md
-```
+AI Quant Suite: * Exposure Gauge: Dynamic visualization of portfolio risk.
 
----
+Sentiment Analysis: Simulated news engine providing bullish/bearish scoring.
 
-## Setup & Run
+Statistical Backing: Real-time win-rate calculations for detected patterns.
 
-### 1 — Create a virtual environment (recommended)
+Modern UX: Glass-morphism UI, custom SVG vector iconography, and smooth Lottie animations.
 
-```bash
-python -m venv venv
-source venv/bin/activate        # macOS / Linux
-venv\Scripts\activate           # Windows cmd
-```
+🛠️ Tech Stack
+Frontend: Streamlit (Custom CSS3 & Glass-morphism)
 
-### 2 — Install TA-Lib C library (required before pip install)
+Charts: Plotly Graph Objects
 
-TA-Lib has a C dependency that must be installed first.
+Analysis: Pandas, NumPy
 
-**macOS**
-```bash
-brew install ta-lib
-```
+Animation: Streamlit Lottie
 
-**Ubuntu / Debian**
-```bash
-sudo apt-get install libta-lib-dev
-```
+Timezone: Pytz (Sync to IST/Asia Kolkata)
 
-**Windows**
-Download the pre-built wheel from:
-https://github.com/cgohlke/talib-build/releases
-Then install with:
-```bash
-pip install TA_Lib‑0.4.xx‑cpXX‑cpXX‑win_amd64.whl
-```
+📂 Project Architecture
+Plaintext
+├── app.py                # Main Streamlit Dashboard logic
+├── data_loader.py        # Financial data ingestion (yfinance/API)
+├── pattern_detector.py   # Technical analysis & fractal logic
+├── pattern_analysis.py   # AI reasoning & statistical win-rates
+└── requirements.txt      # Project dependencies
 
-### 3 — Install Python dependencies
-
-```bash
+🚀 Getting Started
+1. Clone the repository
+Bash
+git clone https://github.com/GitBeat16/stockz1.git
+cd stockz1
+2. Install dependencies
+Bash
 pip install -r requirements.txt
-```
-
-> **No TA-Lib?** The app includes pure-Python fallback detectors for all five
-> patterns. Everything still works; you'll just see a console notice.
-
-### 4 — Run the app
-
-```bash
+3. Run the Terminal
+Bash
 streamlit run app.py
-```
 
-Open http://localhost:8501 in your browser.
+🛡️ System Protocols
+Integrity: Pattern matching utilizes a 120-day fractal window.
 
----
+Risk Management: Default risk profile is set to 1.0% per trade (adjustable in sidebar).
 
-## How It Works
+Vector Art: The system uses high-resolution inline SVGs for all telemetry and navigation icons.
 
-| Module | Responsibility |
-|---|---|
-| `data_loader.py` | Downloads OHLCV data via `yfinance` |
-| `pattern_detector.py` | Detects 5 patterns using TA-Lib (or fallback) |
-| `pattern_analysis.py` | Calculates win rate, avg return, builds explanation |
-| `app.py` | Streamlit UI + Plotly candlestick chart |
+📝 License
+Distributed under the MIT License. See LICENSE for more information.
 
-### Patterns Detected
-- **Hammer** — bullish reversal signal
-- **Doji** — indecision / neutral
-- **Bullish Engulfing** — strong bullish reversal
-- **Bearish Engulfing** — strong bearish reversal
-- **Shooting Star** — bearish reversal signal
-
-### Profitability Metric
-For every pattern occurrence, the app calculates the **3-day forward return**:
-
-```
-return = (Close[day+3] - Close[day]) / Close[day] * 100
-```
-
-- **Bullish patterns** → win if return > 0
-- **Bearish patterns** → win if return < 0
-- **Neutral (Doji)**   → win if |return| > 0.5%
-
----
-
-## Example Output
-
-```
-Pattern detected: Hammer
-Signal: Bullish
-Meaning: A small body near the top of the candle with a long lower shadow.
-         Suggests buyers pushed prices back up after sellers drove them lower.
-Historical results: Occurrences: 84 | Win rate: 59% | Avg return after 3 days: +1.1%
-Suggestion: This pattern historically shows a moderate bullish bias with an
-            average 3-day return of +1.1%.
-```
-
----
-
-## Notes
-
-- This is **not** a trading system. It is an educational tool.
-- Pattern profitability varies by stock, sector, and time period.
-- A win rate above 50% does not guarantee future profits.
-- Always combine technical analysis with fundamental research.
+Note: This terminal is a simulation tool. All trading activity is performed with virtual "Paper Money" for educational and analytical purposes.
