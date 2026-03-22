@@ -78,7 +78,6 @@ st.markdown(f"""
     transition: all 0.3s ease;
     animation: fadeIn 0.8s ease-out;
     margin-bottom: 1rem;
-    overflow: hidden;
 }}
 
 .news-item {{
@@ -124,6 +123,12 @@ st.markdown(f"""
     color: #3b82f6 !important;
     background: rgba(59, 130, 246, 0.1) !important;
 }}
+
+.trade-btn > div > button {{
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+    color: white !important;
+    font-size: 0.9rem;
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -142,6 +147,12 @@ with st.sidebar:
     
     st.markdown(f'<div class="label">{SVG_ICONS["Wallet"]} PAPER BALANCE</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="value mono" style="font-size:1.5rem; color:#10b981;">${st.session_state.cash_balance:,.2f}</div>', unsafe_allow_html=True)
+    
+    if st.session_state.portfolio:
+        st.markdown('<div class="label" style="margin-top:15px; border-top: 1px solid #1e293b; padding-top:10px;">ACTIVE POSITIONS</div>', unsafe_allow_html=True)
+        for sym, q in st.session_state.portfolio.items():
+            if q > 0:
+                st.markdown(f'<div class="mono" style="font-size:0.85rem; color:#3b82f6;">{sym}: {q} Shares</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     analyse = st.button("RUN ENGINE SCAN", use_container_width=True)
@@ -202,7 +213,6 @@ if st.session_state.current_page == "DASHBOARD":
     latest_patterns = get_latest_patterns(df)
     latest_close = float(df["Close"].iloc[-1])
     primary = latest_patterns[0] if latest_patterns else None
-    total_val = st.session_state.cash_balance + sum([v * latest_close for v in st.session_state.portfolio.values()])
 
     st.markdown(f"""
         <div style='margin-bottom:2rem;'>
@@ -211,41 +221,49 @@ if st.session_state.current_page == "DASHBOARD":
         </div>
     """, unsafe_allow_html=True)
 
-    # ── AI QUANT SUITE WITH FIXED GAUGE CONTAINER ───────────────────────────
-    st.markdown("<div style='margin-top:1rem;' class='label'>AI Quant Suite</div>", unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns(4)
+    with c1: st.markdown(f'<div class="quant-card"><div class="label">Last Price</div><div class="value mono">${latest_close:,.2f}</div></div>', unsafe_allow_html=True)
+    with c2: st.markdown(f'<div class="quant-card"><div class="label">Paper Money</div><div class="value mono" style="color:#10b981;">${st.session_state.cash_balance:,.2f}</div></div>', unsafe_allow_html=True)
+    with c3: st.markdown(f'<div class="quant-card"><div class="label">Signal</div><div class="value" style="font-size:1.2rem; color:#3b82f6;">{primary if primary else "NEUTRAL"}</div></div>', unsafe_allow_html=True)
+    with c4:
+        total_val = st.session_state.cash_balance + sum([v * latest_close for v in st.session_state.portfolio.values()])
+        st.markdown(f'<div class="quant-card"><div class="label">Total Equity</div><div class="value mono">${total_val:,.0f}</div></div>', unsafe_allow_html=True)
+
+    fig = go.Figure(data=[go.Candlestick(x=df.tail(100).index, open=df.tail(100)['Open'], high=df.tail(100)['High'], low=df.tail(100)['Low'], close=df.tail(100)['Close'], 
+                    increasing_line_color='#10b981', decreasing_line_color='#ef4444')])
+    fig.update_layout(template="plotly_dark", height=450, margin=dict(l=0,r=0,t=0,b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+    st.plotly_chart(fig, use_container_width=True)
+
+    # ── QUANT RISK & NEWS SENTIMENT SECTION ──────────────────────────────────
+    st.markdown("<div style='margin-top:2rem;' class='label'>AI Quant Suite</div>", unsafe_allow_html=True)
     r_col1, r_col2, r_col3 = st.columns([1.2, 1.4, 1.4])
     
     with r_col1:
-        # Container start
-        st.markdown('<div class="quant-card" style="height:420px; padding: 1.5rem;">', unsafe_allow_html=True)
-        st.markdown(f'<div class="label" style="margin-bottom:10px;">{SVG_ICONS["Shield"]} Exposure Gauge</div>', unsafe_allow_html=True)
-        
+        st.markdown('<div class="quant-card" style="height:400px; display:flex; flex-direction:column; justify-content:center;">', unsafe_allow_html=True)
+        st.markdown(f'<div class="label">{SVG_ICONS["Shield"]} Exposure Gauge</div>', unsafe_allow_html=True)
         current_exposure = (sum([v * latest_close for v in st.session_state.portfolio.values()]) / total_val) * 100
-        returns = df['Close'].pct_change().dropna()
-        volatility = returns.std() * np.sqrt(252) * 100
-        
-        # Plotly chart rendered here (will appear inside the div above)
         fig_gauge = go.Figure(go.Indicator(
             mode = "gauge+number", value = current_exposure,
-            number = {'suffix': "%", 'font': {'family': "JetBrains Mono", 'color': "#f8fafc", 'size': 24}},
+            number = {'suffix': "%", 'font': {'family': "JetBrains Mono", 'color': "#f8fafc", 'size': 20}},
             gauge = {
-                'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "#64748b"},
+                'axis': {'range': [0, 100], 'tickwidth': 1},
                 'bar': {'color': "#3b82f6"},
                 'bgcolor': "rgba(0,0,0,0)",
-                'borderwidth': 2,
-                'bordercolor': "rgba(255,255,255,0.1)",
-                'steps': [{'range': [0, 30], 'color': 'rgba(16, 185, 129, 0.15)'}, {'range': [70, 100], 'color': 'rgba(239, 68, 68, 0.15)'}]
+                'steps': [{'range': [0, 30], 'color': 'rgba(16, 185, 129, 0.2)'}, {'range': [70, 100], 'color': 'rgba(239, 68, 68, 0.2)'}]
             }
         ))
-        fig_gauge.update_layout(height=220, margin=dict(l=20,r=20,t=40,b=20), paper_bgcolor='rgba(0,0,0,0)')
+        fig_gauge.update_layout(height=180, margin=dict(l=10,r=10,t=40,b=0), paper_bgcolor='rgba(0,0,0,0)')
         st.plotly_chart(fig_gauge, use_container_width=True)
         
-        st.markdown(f'<div class="label" style="text-align:center; margin-top:10px;">VOLATILITY: {volatility:.1f}%</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True) # Container end
+        returns = df['Close'].pct_change().dropna()
+        volatility = returns.std() * np.sqrt(252) * 100
+        st.markdown(f'<div class="label" style="text-align:center;">Volatility: {volatility:.1f}%</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with r_col2:
-        st.markdown('<div class="quant-card" style="height:420px;">', unsafe_allow_html=True)
+        st.markdown('<div class="quant-card" style="height:400px;">', unsafe_allow_html=True)
         st.markdown(f'<div class="label">{SVG_ICONS["News"]} News Sentiment</div>', unsafe_allow_html=True)
+        # Simulated Sentiment Engine for Ticker
         news_items = [
             {"title": f"{active_ticker} exceeds Q1 expectations", "sent": "BULLISH", "score": 0.8},
             {"title": "Sector regulation changes pending", "sent": "NEUTRAL", "score": 0.5},
@@ -253,35 +271,83 @@ if st.session_state.current_page == "DASHBOARD":
         ]
         avg_sent = sum([i['score'] for i in news_items]) / len(news_items)
         sent_color = "#10b981" if avg_sent > 0.6 else "#ef4444" if avg_sent < 0.4 else "#f59e0b"
-        st.markdown(f'<div style="font-size:1.5rem; font-weight:800; color:{sent_color}; margin:15px 0;">{ "POSITIVE" if avg_sent > 0.6 else "NEGATIVE" if avg_sent < 0.4 else "MIXED" } ({avg_sent*100:.0f}%)</div>', unsafe_allow_html=True)
+        
+        st.markdown(f'<div style="font-size:1.2rem; font-weight:800; color:{sent_color}; margin:10px 0;">{ "POSITIVE" if avg_sent > 0.6 else "NEGATIVE" if avg_sent < 0.4 else "MIXED" } ({avg_sent*100:.0f}%)</div>', unsafe_allow_html=True)
+        
         for item in news_items:
             s_color = "#10b981" if item['sent'] == "BULLISH" else "#ef4444" if item['sent'] == "BEARISH" else "#94a3b8"
-            st.markdown(f'<div class="news-item"><div style="font-size:0.8rem; color:#f8fafc; margin-bottom:4px;">{item["title"]}</div><div class="mono" style="font-size:0.65rem; color:{s_color};">{item["sent"]}</div></div>', unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="news-item">
+                <div style="font-size:0.75rem; color:#f8fafc; margin-bottom:4px;">{item['title']}</div>
+                <div class="mono" style="font-size:0.6rem; color:{s_color};">{item['sent']}</div>
+            </div>
+            """, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
     with r_col3:
-        st.markdown('<div class="quant-card" style="height:420px;">', unsafe_allow_html=True)
+        st.markdown('<div class="quant-card" style="height:400px;">', unsafe_allow_html=True)
         st.markdown(f'<div class="label">{SVG_ICONS["Info"]} Reasoning</div>', unsafe_allow_html=True)
+        st.write("")
         st.markdown(f"""
-        <div style="margin-top:20px; font-size:0.85rem; color:#94a3b8; line-height:1.7;">
-        <b style="color:#f8fafc;">Technical Analysis:</b><br>{primary if primary else "No dominant pattern identified"}. Market is currently in a consolidation phase with support at 1-month lows.<br><br>
-        <b style="color:#f8fafc;">Sentiment Factor:</b><br>The 50% mixed score suggests caution. News is reactive to earnings, but macro pressure remains.<br><br>
-        <b style="color:#f8fafc;">Recommendation:</b><br>Hold current position. Do not increase exposure until volatility drops below 40%.
-        </div>
+        <p style="font-size:0.8rem; color:#94a3b8; line-height:1.5;">
+        <b>Technical:</b> {primary if primary else "No clear pattern"}. RSI at 42.1 (Neutral).<br><br>
+        <b>Sentiment:</b> News flow is currently <b>{ "Bullish" if avg_sent > 0.6 else "Bearish" if avg_sent < 0.4 else "Mixed" }</b>. Social mentions up 12%.<br><br>
+        <b>Quant Recommendation:</b> Maintain position. { "Buy on dip" if avg_sent > 0.5 else "Reduce exposure" } suggested.
+        </p>
         """, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── CHART ────────────────────────────────────────────────────────────────
-    st.markdown("<div style='margin-top:2rem;' class='label'>Technical Overview</div>", unsafe_allow_html=True)
-    fig = go.Figure(data=[go.Candlestick(x=df.tail(100).index, open=df.tail(100)['Open'], high=df.tail(100)['High'], low=df.tail(100)['Low'], close=df.tail(100)['Close'], 
-                    increasing_line_color='#10b981', decreasing_line_color='#ef4444')])
-    fig.update_layout(template="plotly_dark", height=450, margin=dict(l=0,r=0,t=0,b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-    st.plotly_chart(fig, use_container_width=True)
+    # ── ORDER EXECUTION ENGINE ───────────────────────────────────────────────
+    st.markdown("<div style='margin-top:2rem;' class='label'>Order Execution Engine</div>", unsafe_allow_html=True)
+    trade_col1, trade_col2 = st.columns([2, 1])
+    with trade_col1:
+        st.markdown('<div class="quant-card">', unsafe_allow_html=True)
+        q_col1, q_col2, q_col3 = st.columns(3)
+        with q_col1: qty = st.number_input("QUANTITY", min_value=1, value=10)
+        with q_col2: st.markdown(f'<div class="label">Est. Cost</div><div class="value mono" style="font-size:1.4rem;">${qty * latest_close:,.2f}</div>', unsafe_allow_html=True)
+        with q_col3: st.markdown(f'<div class="label">Buying Power</div><div class="value mono" style="font-size:1.4rem;">${st.session_state.cash_balance:,.0f}</div>', unsafe_allow_html=True)
+        
+        b_col1, b_col2 = st.columns(2)
+        with b_col1:
+            st.markdown('<div class="trade-btn">', unsafe_allow_html=True)
+            if st.button("EXECUTE BUY ORDER", use_container_width=True):
+                cost = qty * latest_close
+                if st.session_state.cash_balance >= cost:
+                    st.session_state.cash_balance -= cost
+                    st.session_state.portfolio[active_ticker] = st.session_state.portfolio.get(active_ticker, 0) + qty
+                    st.session_state.trade_history.append({"time": get_ist_time(), "symbol": active_ticker, "type": "BUY", "qty": qty, "price": latest_close})
+                    st.success(f"Filled: +{qty} {active_ticker}"); time.sleep(1); st.rerun()
+                else: st.error("Margin Insufficient")
+            st.markdown('</div>', unsafe_allow_html=True)
+        with b_col2:
+            st.markdown('<div class="trade-btn">', unsafe_allow_html=True)
+            if st.button("EXECUTE SELL ORDER", use_container_width=True):
+                if st.session_state.portfolio.get(active_ticker, 0) >= qty:
+                    st.session_state.cash_balance += (qty * latest_close)
+                    st.session_state.portfolio[active_ticker] -= qty
+                    st.session_state.trade_history.append({"time": get_ist_time(), "symbol": active_ticker, "type": "SELL", "qty": qty, "price": latest_close})
+                    st.warning(f"Filled: -{qty} {active_ticker}"); time.sleep(1); st.rerun()
+                else: st.error("Position Size Mismatch")
+            st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with trade_col2:
+        st.markdown('<div class="quant-card" style="height:100%;">', unsafe_allow_html=True)
+        st.markdown(f'<div class="label">{SVG_ICONS["Wallet"]} Net Position</div>', unsafe_allow_html=True)
+        pos = st.session_state.portfolio.get(active_ticker, 0)
+        st.markdown(f'<div class="value mono">{pos} <span style="font-size:0.8rem; color:#64748b;">Shares</span></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="label" style="margin-top:15px;">Market Value</div><div class="value mono" style="font-size:1.4rem; color:#10b981;">${pos * latest_close:,.2f}</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top:3rem;' class='label'>Historical Performance Analysis</div>", unsafe_allow_html=True)
+    cols = st.columns(len(stats_all))
+    for i, (name, stats) in enumerate(stats_all.items()):
+        with cols[i]:
+            st.markdown(f'<div class="quant-card"><div class="label" style="color:#3b82f6">{name}</div><div style="font-size:1.4rem; font-weight:700; margin:0.5rem 0;">{stats["win_rate"]}% <span class="label">Win Rate</span></div><div class="label">Avg Return: {stats["avg_return"]:.2f}%</div></div>', unsafe_allow_html=True)
 
 elif st.session_state.current_page == "PORTFOLIO":
     st.markdown("<div class='label'>Account Assets</div><h2 style='color:white;'>Active Portfolio</h2>", unsafe_allow_html=True)
     st.markdown(f'<div class="quant-card"><div class="label">Liquid Cash</div><div class="value mono" style="color:#10b981;">${st.session_state.cash_balance:,.2f}</div></div>', unsafe_allow_html=True)
-    # Portfolio display logic...
     st.markdown('<div class="quant-card">', unsafe_allow_html=True)
     st.markdown(f'<div class="label" style="margin-bottom:15px;">{SVG_ICONS["Shield"]} Open Positions</div>', unsafe_allow_html=True)
     if not st.session_state.portfolio or sum(st.session_state.portfolio.values()) == 0:
@@ -292,8 +358,24 @@ elif st.session_state.current_page == "PORTFOLIO":
                 st.markdown(f'<div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><span class="mono" style="color:#3b82f6; font-weight:700;">{ticker}</span><span class="mono" style="color:#fff;">{qty} Shares</span></div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
+    st.markdown("<div class='label' style='margin-top:2rem;'>Activity Log</div><h2 style='color:white;'>Trade History (IST)</h2>", unsafe_allow_html=True)
+    st.markdown('<div class="quant-card">', unsafe_allow_html=True)
+    for trade in reversed(st.session_state.trade_history):
+        color = "#10b981" if trade['type'] == "BUY" else "#ef4444"
+        st.markdown(f'<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><div><span class="mono" style="color:#64748b; font-size:0.8rem; margin-right:15px;">[{trade["time"]}]</span><span class="mono" style="font-weight:700; color:{color};">{trade["type"]}</span><span class="mono" style="color:#fff; margin-left:10px;">{trade["qty"]} {trade["symbol"]}</span></div><div class="mono" style="color:#94a3b8;">@ ${trade["price"]:,.2f}</div></div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
 elif st.session_state.current_page == "SETTINGS":
     st.markdown("<div class='label'>System Configuration</div><h2 style='color:white;'>Terminal Settings</h2>", unsafe_allow_html=True)
     st.markdown('<div class="quant-card">', unsafe_allow_html=True)
-    st.button("WIPE SESSION DATA", on_click=lambda: st.session_state.clear())
+    st.checkbox("Enable Real-time Vector Art Rendering", value=True)
+    st.checkbox("Show Advanced Quant Analytics", value=True)
+    if st.button("HARD RESET TERMINAL"):
+        st.session_state.cash_balance = 100000.0; st.session_state.portfolio = {}; st.session_state.trade_history = []; st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
+
+with st.expander("SYSTEM PROTOCOLS", expanded=False):
+    g1, g2, g3 = st.columns(3)
+    with g1: st.markdown(f'{SVG_ICONS["Shield"]} **Integrity**<br><p style="font-size:0.8rem; color:#94a3b8;">Pattern window: 120D fractal match.</p>', unsafe_allow_html=True)
+    with g2: st.markdown(f'{SVG_ICONS["Logo"]} **Deployment**<br><p style="font-size:0.8rem; color:#94a3b8;">Simulated session-state logic.</p>', unsafe_allow_html=True)
+    with g3: st.markdown(f'{SVG_ICONS["Info"]} **Risk**<br><p style="font-size:0.8rem; color:#94a3b8;">Profile: {risk_pct}% per trade.</p>', unsafe_allow_html=True)
