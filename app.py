@@ -6,13 +6,20 @@ import time
 import requests
 from streamlit_lottie import st_lottie
 
-# ── Backend imports (Ensure these files exist in your directory) ──────────────
+# ── Backend imports ──────────────────────────────────────────────────────────
+# Mock functions for demonstration if modules aren't present
 try:
     from data_loader      import load_stock_data, get_ticker_info
     from pattern_detector import get_latest_patterns, PATTERNS
     from pattern_analysis import analyse_all_patterns, build_ai_explanation
-except ImportErrors:
-    st.error("Backend modules missing. Please ensure data_loader, pattern_detector, and pattern_analysis are in the root.")
+except ImportError:
+    # Fallback for local testing
+    def load_stock_data(t, p): 
+        dates = pd.date_range(end=pd.Timestamp.now(), periods=100)
+        return pd.DataFrame(np.random.randn(100, 4), index=dates, columns=['Open', 'High', 'Low', 'Close'])
+    def get_ticker_info(t): return {"sector": "TECHNOLOGY", "name": "Apple Inc."}
+    def analyse_all_patterns(df): return {"Bullish": {"win_rate": 65, "avg_return": 1.2}}
+    def get_latest_patterns(df): return ["BULLISH_ENGULFING"]
 
 # ════════════════════════════════════════════════════════════════════════════
 # 1. PAGE CONFIG & SESSION STATE
@@ -32,221 +39,142 @@ def load_lottieurl(url: str):
 lottie_scan = load_lottieurl("https://assets10.lottiefiles.com/packages/lf20_ghp9v062.json")
 
 # ════════════════════════════════════════════════════════════════════════════
-# 2. VECTOR ART REPOSITORY
+# 2. VECTOR ART REPOSITORY (Replacing Emojis)
 # ════════════════════════════════════════════════════════════════════════════
 SVG_ICONS = {
     "Logo": '<svg width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M3 3V21H21" stroke="url(#g1)" stroke-width="2"/><path d="M7 14L11 10L15 14L20 9" stroke="url(#g2)" stroke-width="2"/><defs><linearGradient id="g1"><stop stop-color="#3B82F6"/><stop offset="1" stop-color="#10B981"/></linearGradient><linearGradient id="g2"><stop stop-color="#60A5FA"/><stop offset="1" stop-color="#34D399"/></linearGradient></defs></svg>',
     "Wallet": '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"/></svg>',
     "Shield": '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
-    "Info": '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+    "Info": '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+    "Loading": '<svg width="50" height="50" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#3b82f6" stroke-width="5" stroke-dasharray="31.4 31.4" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/></circle></svg>'
 }
 
 # ════════════════════════════════════════════════════════════════════════════
-# 3. ADVANCED ANIMATED CSS
+# 3. CSS STYLING
 # ════════════════════════════════════════════════════════════════════════════
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
-
-[data-testid="stAppViewContainer"] {{
-    background: radial-gradient(circle at top right, #0f172a, #020617);
-    font-family: 'Plus Jakarta Sans', sans-serif;
-}}
-
-.quant-card {{
-    background: rgba(30, 41, 59, 0.4);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 16px;
-    padding: 1.5rem;
-    transition: all 0.3s ease;
-    animation: fadeIn 0.8s ease-out;
-    margin-bottom: 1rem;
-}}
-
-.quant-card:hover {{
-    transform: translateY(-5px);
-    border-color: rgba(59, 130, 246, 0.5);
-}}
-
-.live-dot {{
-    height: 8px; width: 8px; background-color: #10b981; border-radius: 50%;
-    display: inline-block; margin-right: 8px;
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 1);
-    animation: pulse-green 2s infinite;
-}}
-
-@keyframes pulse-green {{
-    0% {{ transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }}
-    70% {{ transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }}
-    100% {{ transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }}
-}}
-
-@keyframes fadeIn {{ from {{ opacity: 0; transform: translateY(20px); }} to {{ opacity: 1; transform: translateY(0); }} }}
-
+[data-testid="stAppViewContainer"] {{ background: radial-gradient(circle at top right, #0f172a, #020617); font-family: 'Plus Jakarta Sans', sans-serif; }}
+.quant-card {{ background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 1.5rem; transition: all 0.3s ease; margin-bottom: 1rem; }}
+.quant-card:hover {{ transform: translateY(-5px); border-color: rgba(59, 130, 246, 0.5); }}
+.live-dot {{ height: 8px; width: 8px; background-color: #10b981; border-radius: 50%; display: inline-block; margin-right: 8px; box-shadow: 0 0 0 0 rgba(16, 185, 129, 1); animation: pulse-green 2s infinite; }}
+@keyframes pulse-green {{ 0% {{ transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }} 70% {{ transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }} 100% {{ transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }} }}
 .label {{ font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }}
 .value {{ font-size: 1.75rem; font-weight: 800; margin-top: 0.25rem; color: #f8fafc; }}
 .mono {{ font-family: 'JetBrains Mono', monospace; }}
-
-.stButton > button {{
-    border-radius: 12px !important;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
-    color: white !important;
-    font-weight: 700 !important;
-    border: none !important;
-    transition: 0.4s !important;
-}}
 </style>
 """, unsafe_allow_html=True)
 
 # ════════════════════════════════════════════════════════════════════════════
-# 4. NAVIGATION BAR & SIDEBAR
+# 4. SIDEBAR & DATA LOADING
 # ════════════════════════════════════════════════════════════════════════════
-# Top Navigation Bar
-st.markdown(f"""
-<div style="display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.8); padding: 10px 20px; border-bottom: 1px solid rgba(59, 130, 246, 0.2); margin-bottom: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
-    <div style="display: flex; gap: 20px; align-items: center;">
-        <span style="color: #3b82f6; font-weight: 800; font-family: 'JetBrains Mono';">{SVG_ICONS["Logo"]}</span>
-        <span class="label" style="color: #fff; cursor: pointer;">DASHBOARD</span>
-        <span class="label" style="cursor: pointer;">PORTFOLIO</span>
-        <span class="label" style="cursor: pointer;">SETTINGS</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 15px;">
-        <div class="live-dot"></div>
-        <span class="label" style="color: #10b981;">CORE_STABLE</span>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
 with st.sidebar:
     st.markdown(f'<div style="text-align:center; padding:1rem;">{SVG_ICONS["Logo"]}</div>', unsafe_allow_html=True)
-    st.markdown("<h2 style='text-align:center; font-size:1.2rem;'>StockZ Terminal</h2>", unsafe_allow_html=True)
-    
     ticker = st.text_input("INSTRUMENT", value="AAPL").upper().strip()
     period = st.selectbox("HISTORY", options=["6mo", "1y", "2y", "5y"], index=1)
     risk_pct = st.slider("Risk Per Trade (%)", 0.5, 5.0, 1.0, 0.5)
-    
     st.markdown("---")
-    analyse = st.button("RUN ENGINE SCAN")
+    analyse_btn = st.button("RUN ENGINE SCAN")
 
-# ════════════════════════════════════════════════════════════════════════════
-# 5. MAIN UI LOGIC
-# ════════════════════════════════════════════════════════════════════════════
-if not analyse and 'last_df' not in st.session_state:
+if not analyse_btn and 'last_df' not in st.session_state:
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
         st_lottie(lottie_scan, height=300, key="initial")
         st.markdown("<p style='text-align:center; color:#64748b;' class='mono'>SYSTEM READY. AWAITING INPUT...</p>", unsafe_allow_html=True)
     st.stop()
 
-if analyse:
-    with st.spinner("Decoding Market Fractals..."):
-        time.sleep(0.8)
+if analyse_btn:
+    with st.status("Decoding Market Fractals...", expanded=True) as status:
+        st.write("Fetching historical data...")
         df = load_stock_data(ticker, period)
+        st.write("Analyzing patterns...")
         info = get_ticker_info(ticker)
+        time.sleep(0.5)
         st.session_state.last_df, st.session_state.last_info, st.session_state.last_ticker = df, info, ticker
+        status.update(label="Scan Complete", state="complete", expanded=False)
 
-# Data Extraction
-df, info, active_ticker = st.session_state.last_df, st.session_state.last_info, st.session_state.last_ticker
+# Data References
+df = st.session_state.last_df
+info = st.session_state.last_info
+active_ticker = st.session_state.last_ticker
+latest_close = float(df["Close"].iloc[-1])
+
+# ════════════════════════════════════════════════════════════════════════════
+# 5. HEADER & KPI CALCULATION
+# ════════════════════════════════════════════════════════════════════════════
 stats_all = analyse_all_patterns(df)
 latest_patterns = get_latest_patterns(df)
-latest_close = float(df["Close"].iloc[-1])
 daily_chg = (latest_close - float(df["Close"].iloc[-2])) / float(df["Close"].iloc[-2]) * 100
-primary = latest_patterns[0] if latest_patterns else None
+primary = latest_patterns[0] if latest_patterns else "NEUTRAL"
 
-# Header
-st.markdown(f"""
-    <div style='margin-bottom:2rem;'>
-        <div class='label'><span class='live-dot'></span> {info['sector']} • LIVE FEED</div>
-        <div style='font-size:2.8rem; font-weight:800; letter-spacing:-0.02em;'>{info['name']} <span style='color:#3b82f6' class='mono'>{active_ticker}</span></div>
-    </div>
-""", unsafe_allow_html=True)
+# Calculate Total Equity (Cash + All Positions)
+current_market_value = sum([count * latest_close for t, count in st.session_state.portfolio.items() if t == active_ticker])
+# Note: In a real app, you'd fetch prices for all tickers in portfolio.
+total_equity = st.session_state.cash_balance + current_market_value
 
-# KPI Grid
+st.markdown(f"<div><div class='label'><span class='live-dot'></span> {info['sector']} • LIVE FEED</div>"
+            f"<div style='font-size:2.8rem; font-weight:800;'>{info['name']} <span style='color:#3b82f6' class='mono'>{active_ticker}</span></div></div>", unsafe_allow_html=True)
+
 c1, c2, c3, c4 = st.columns(4)
-with c1: st.markdown(f'<div class="quant-card"><div class="label">Last Traded</div><div class="value mono">${latest_close:,.2f}</div></div>', unsafe_allow_html=True)
-with c2: st.markdown(f'<div class="quant-card"><div class="label">Session Change</div><div class="value mono" style="color:{"#10b981" if daily_chg >=0 else "#ef4444"}">{daily_chg:+.2f}%</div></div>', unsafe_allow_html=True)
-with c3: st.markdown(f'<div class="quant-card"><div class="label">Pattern Signal</div><div class="value" style="font-size:1.2rem; color:#3b82f6;">{primary if primary else "NEUTRAL"}</div></div>', unsafe_allow_html=True)
-with c4:
-    total_val = st.session_state.cash_balance + sum([v * latest_close for v in st.session_state.portfolio.values()])
-    st.markdown(f'<div class="quant-card"><div class="label">Total Equity</div><div class="value mono">${total_val:,.0f}</div></div>', unsafe_allow_html=True)
+c1.markdown(f'<div class="quant-card"><div class="label">Last Traded</div><div class="value mono">${latest_close:,.2f}</div></div>', unsafe_allow_html=True)
+c2.markdown(f'<div class="quant-card"><div class="label">Session Change</div><div class="value mono" style="color:{"#10b981" if daily_chg >=0 else "#ef4444"}">{daily_chg:+.2f}%</div></div>', unsafe_allow_html=True)
+c3.markdown(f'<div class="quant-card"><div class="label">Pattern Signal</div><div class="value" style="font-size:1.2rem; color:#3b82f6;">{primary}</div></div>', unsafe_allow_html=True)
+c4.markdown(f'<div class="quant-card"><div class="label">Total Equity</div><div class="value mono">${total_equity:,.2f}</div></div>', unsafe_allow_html=True)
 
-# Charting
-fig = go.Figure(data=[go.Candlestick(x=df.tail(100).index, open=df.tail(100)['Open'], high=df.tail(100)['High'], low=df.tail(100)['Low'], close=df.tail(100)['Close'], 
-                increasing_line_color='#10b981', decreasing_line_color='#ef4444')])
-fig.update_layout(template="plotly_dark", height=450, margin=dict(l=0,r=0,t=0,b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+# ════════════════════════════════════════════════════════════════════════════
+# 6. CHART & TRADE MODULE
+# ════════════════════════════════════════════════════════════════════════════
+fig = go.Figure(data=[go.Candlestick(x=df.tail(100).index, open=df.tail(100)['Open'], high=df.tail(100)['High'], low=df.tail(100)['Low'], close=df.tail(100)['Close'], increasing_line_color='#10b981', decreasing_line_color='#ef4444')])
+fig.update_layout(template="plotly_dark", height=400, margin=dict(l=0,r=0,t=0,b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
 st.plotly_chart(fig, use_container_width=True)
 
-# ════════════════════════════════════════════════════════════════════════════
-# 6. TRADE EXECUTION MODULE
-# ════════════════════════════════════════════════════════════════════════════
-st.markdown("<div style='margin-top:2rem;' class='label'>Order Execution Engine</div>", unsafe_allow_html=True)
-trade_col1, trade_col2 = st.columns([2, 1])
+st.markdown("<div class='label'>Order Execution Engine</div>", unsafe_allow_html=True)
+t_col1, t_col2 = st.columns([2, 1])
 
-with trade_col1:
+with t_col1:
     st.markdown('<div class="quant-card">', unsafe_allow_html=True)
     q_col1, q_col2, q_col3 = st.columns(3)
-    with q_col1:
-        qty = st.number_input("QUANTITY", min_value=1, value=10)
-    with q_col2:
-        st.markdown(f'<div class="label">Est. Cost</div><div class="value mono" style="font-size:1.4rem;">${qty * latest_close:,.2f}</div>', unsafe_allow_html=True)
-    with q_col3:
-        st.markdown(f'<div class="label">Buying Power</div><div class="value mono" style="font-size:1.4rem;">${st.session_state.cash_balance:,.0f}</div>', unsafe_allow_html=True)
+    qty = q_col1.number_input("QUANTITY", min_value=1, value=10)
+    q_col2.markdown(f'<div class="label">Est. Cost</div><div class="value mono" style="font-size:1.4rem;">${qty * latest_close:,.2f}</div>', unsafe_allow_html=True)
+    q_col3.markdown(f'<div class="label">Buying Power</div><div class="value mono" style="font-size:1.4rem;">${st.session_state.cash_balance:,.2f}</div>', unsafe_allow_html=True)
     
-    b_col1, b_col2 = st.columns(2)
-    with b_col1:
-        if st.button("EXECUTE BUY ORDER", use_container_width=True):
-            cost = qty * latest_close
-            if st.session_state.cash_balance >= cost:
-                st.session_state.cash_balance -= cost
-                st.session_state.portfolio[active_ticker] = st.session_state.portfolio.get(active_ticker, 0) + qty
-                st.success(f"Order Filled: +{qty} {active_ticker}")
-                st.rerun()
-            else:
-                st.error("Margin Insufficient")
-    with b_col2:
-        if st.button("EXECUTE SELL ORDER", use_container_width=True):
-            if st.session_state.portfolio.get(active_ticker, 0) >= qty:
-                st.session_state.cash_balance += (qty * latest_close)
-                st.session_state.portfolio[active_ticker] -= qty
-                st.warning(f"Order Filled: -{qty} {active_ticker}")
-                st.rerun()
-            else:
-                st.error("Position Size Mismatch")
+    b1, b2 = st.columns(2)
+    if b1.button("EXECUTE BUY ORDER", use_container_width=True):
+        cost = qty * latest_close
+        if st.session_state.cash_balance >= cost:
+            st.session_state.cash_balance -= cost
+            st.session_state.portfolio[active_ticker] = st.session_state.portfolio.get(active_ticker, 0) + qty
+            st.rerun()
+        else:
+            st.error("Insufficient Funds")
+            
+    if b2.button("EXECUTE SELL ORDER", use_container_width=True):
+        if st.session_state.portfolio.get(active_ticker, 0) >= qty:
+            st.session_state.cash_balance += (qty * latest_close)
+            st.session_state.portfolio[active_ticker] -= qty
+            st.rerun()
+        else:
+            st.error("Insufficient Position")
     st.markdown('</div>', unsafe_allow_html=True)
 
-with trade_col2:
+with t_col2:
     st.markdown('<div class="quant-card" style="height:100%;">', unsafe_allow_html=True)
     st.markdown(f'<div class="label">{SVG_ICONS["Wallet"]} Net Position</div>', unsafe_allow_html=True)
-    pos = st.session_state.portfolio.get(active_ticker, 0)
-    st.markdown(f'<div class="value mono">{pos} <span style="font-size:0.8rem; color:#64748b;">Shares</span></div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="label" style="margin-top:15px;">Market Value</div><div class="value mono" style="font-size:1.4rem; color:#10b981;">${pos * latest_close:,.2f}</div>', unsafe_allow_html=True)
+    shares = st.session_state.portfolio.get(active_ticker, 0)
+    st.markdown(f'<div class="value mono">{shares} <span style="font-size:0.8rem; color:#64748b;">Shares</span></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="label" style="margin-top:15px;">Position Value</div><div class="value mono" style="font-size:1.4rem; color:#10b981;">${shares * latest_close:,.2f}</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ════════════════════════════════════════════════════════════════════════════
-# 7. BACKTEST METRICS & GUIDE
+# 7. FOOTER METRICS
 # ════════════════════════════════════════════════════════════════════════════
-st.markdown("<div style='margin-top:3rem;' class='label'>Historical Performance Analysis</div>", unsafe_allow_html=True)
-cols = st.columns(len(stats_all))
+st.markdown("<div style='margin-top:2rem;' class='label'>Historical Performance</div>", unsafe_allow_html=True)
+perf_cols = st.columns(len(stats_all))
 for i, (name, stats) in enumerate(stats_all.items()):
-    with cols[i]:
-        st.markdown(f"""
+    perf_cols[i].markdown(f"""
         <div class="quant-card">
             <div class="label" style="color:#3b82f6">{name}</div>
-            <div style="font-size:1.4rem; font-weight:700; margin:0.5rem 0;">{stats['win_rate']}% <span class="label">Win Rate</span></div>
-            <div class="label">Avg Return: {stats['avg_return']:.2f}%</div>
+            <div style="font-size:1.4rem; font-weight:700;">{stats['win_rate']}% <span class="label">Wins</span></div>
         </div>
-        """, unsafe_allow_html=True)
-
-st.markdown("<div style='height:40px;'></div>", unsafe_allow_html=True)
-with st.expander("SYSTEM PROTOCOLS & USER GUIDE"):
-    g1, g2, g3 = st.columns(3)
-    with g1:
-        st.markdown(f"#### {SVG_ICONS['Shield']} Integrity")
-        st.write("Engine utilizes vectorized pattern matching with a 120-day historical window to filter signal noise.")
-    with g2:
-        st.markdown(f"#### {SVG_ICONS['Logo']} Deployment")
-        st.write("Trades are simulated via session-state memory. To clear portfolio data, refresh the browser session.")
-    with g3:
-        st.markdown(f"#### {SVG_ICONS['Info']} Risk Level")
-        st.write(f"Risk Profile: {risk_pct}%. Position sizing is calculated relative to total portfolio equity.")
+    """, unsafe_allow_html=True)
