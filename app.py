@@ -6,7 +6,7 @@ import time
 import requests
 from streamlit_lottie import st_lottie
 
-# ── Backend imports (unchanged) ──────────────────────────────────────────────
+# ── Backend imports (Ensure these files exist in your directory) ─────────────
 from data_loader      import load_stock_data, get_ticker_info
 from pattern_detector import get_latest_patterns, PATTERNS
 from pattern_analysis import analyse_all_patterns, build_ai_explanation
@@ -17,11 +17,17 @@ from pattern_analysis import analyse_all_patterns, build_ai_explanation
 st.set_page_config(page_title="Terminal | AI Pattern Analyzer", layout="wide", initial_sidebar_state="expanded")
 
 def load_lottieurl(url: str):
-    r = requests.get(url)
-    if r.status_code != 200: return None
-    return r.json()
+    try:
+        r = requests.get(url, timeout=5)
+        if r.status_code != 200:
+            return None
+        return r.json()
+    except Exception:
+        return None
 
-lottie_scan = load_lottieurl("https://assets10.lottiefiles.com/packages/lf20_ghp9v062.json") # Scanning animation
+# UPDATED: Using a verified working Lottie URL
+lottie_url = "https://lottie.host/5cf190bc-ad99-467b-9e32-243765103d1c/InP4U5VfR9.json"
+lottie_scan = load_lottieurl(lottie_url)
 
 if 'cash_balance' not in st.session_state:
     st.session_state.cash_balance = 100000.0
@@ -45,13 +51,11 @@ st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
 
-/* Main Background */
 [data-testid="stAppViewContainer"] {{
     background: radial-gradient(circle at top right, #0f172a, #020617);
     font-family: 'Plus Jakarta Sans', sans-serif;
 }}
 
-/* Glassmorphism Cards with Entrance Animation */
 .quant-card {{
     background: rgba(30, 41, 59, 0.4);
     backdrop-filter: blur(10px);
@@ -68,7 +72,6 @@ st.markdown(f"""
     box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
 }}
 
-/* Pulsing Live Indicator */
 .live-dot {{
     height: 8px;
     width: 8px;
@@ -95,7 +98,6 @@ st.markdown(f"""
 .value {{ font-size: 1.75rem; font-weight: 800; margin-top: 0.25rem; color: #f8fafc; }}
 .mono {{ font-family: 'JetBrains Mono', monospace; }}
 
-/* Custom Button */
 .stButton > button {{
     border-radius: 12px !important;
     background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
@@ -119,24 +121,28 @@ with st.sidebar:
     analyse = st.button("RUN ENGINE SCAN")
 
 # ════════════════════════════════════════════════════════════════════════════
-# 5. MAIN UI LOGIC WITH ANIMATION
+# 5. MAIN UI LOGIC
 # ════════════════════════════════════════════════════════════════════════════
 if not analyse and 'last_df' not in st.session_state:
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
-        st_lottie(lottie_scan, height=300, key="initial")
+        # SAFETY CHECK: Only try to show lottie if it loaded successfully
+        if lottie_scan:
+            st_lottie(lottie_scan, height=300, key="initial")
+        else:
+            st.markdown("<div style='height:300px; display:flex; align-items:center; justify-content:center;'>🌀</div>", unsafe_allow_html=True)
+            
         st.markdown("<p style='text-align:center; color:#64748b;' class='mono'>SYSTEM READY. AWAITING INPUT...</p>", unsafe_allow_html=True)
     st.stop()
 
 if analyse:
     with st.spinner("Decoding Market Fractals..."):
-        # Simulated "Analysis" time for dramatic effect
         time.sleep(1.2)
         df = load_stock_data(ticker, period)
         info = get_ticker_info(ticker)
         st.session_state.last_df, st.session_state.last_info, st.session_state.last_ticker = df, info, ticker
 
-# Extract Data
+# Data Extraction
 df, info, active_ticker = st.session_state.last_df, st.session_state.last_info, st.session_state.last_ticker
 stats_all = analyse_all_patterns(df)
 latest_patterns = get_latest_patterns(df)
@@ -182,7 +188,7 @@ for i, (name, stats) in enumerate(stats_all.items()):
         </div>
         """, unsafe_allow_html=True)
 
-# Guide (at footer)
+# Guide
 st.markdown(f"""
 <div class="guide-panel">
     <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">{SVG_ICONS['Info']} <span class="label" style="color:#fff">System Protocol</span></div>
