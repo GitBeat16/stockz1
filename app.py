@@ -11,7 +11,7 @@ try:
     from data_loader      import load_stock_data, get_ticker_info
     from pattern_detector import get_latest_patterns, PATTERNS
     from pattern_analysis import analyse_all_patterns, build_ai_explanation
-except ImportErrors:
+except ImportError:
     st.error("Backend modules missing. Please ensure data_loader, pattern_detector, and pattern_analysis are in the root.")
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -25,10 +25,13 @@ if 'portfolio' not in st.session_state:
     st.session_state.portfolio = {}
 
 def load_lottieurl(url: str):
-    r = requests.get(url)
-    if r.status_code != 200: return None
-    return r.json()
+    try:
+        r = requests.get(url)
+        if r.status_code != 200: return None
+        return r.json()
+    except: return None
 
+# Loading Animation for Scans
 lottie_scan = load_lottieurl("https://assets10.lottiefiles.com/packages/lf20_ghp9v062.json")
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -36,9 +39,10 @@ lottie_scan = load_lottieurl("https://assets10.lottiefiles.com/packages/lf20_ghp
 # ════════════════════════════════════════════════════════════════════════════
 SVG_ICONS = {
     "Logo": '<svg width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M3 3V21H21" stroke="url(#g1)" stroke-width="2"/><path d="M7 14L11 10L15 14L20 9" stroke="url(#g2)" stroke-width="2"/><defs><linearGradient id="g1"><stop stop-color="#3B82F6"/><stop offset="1" stop-color="#10B981"/></linearGradient><linearGradient id="g2"><stop stop-color="#60A5FA"/><stop offset="1" stop-color="#34D399"/></linearGradient></defs></svg>',
-    "Wallet": '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"/></svg>',
+    "Wallet": '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"/></svg>',
     "Shield": '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
-    "Info": '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+    "Info": '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" cy="16" x2="12" y2="12"/><line x1="12" cy="8" x2="12.01" y2="8"/></svg>',
+    "Cash": '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/></svg>'
 }
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -102,22 +106,6 @@ st.markdown(f"""
 # ════════════════════════════════════════════════════════════════════════════
 # 4. NAVIGATION BAR & SIDEBAR
 # ════════════════════════════════════════════════════════════════════════════
-# Top Navigation Bar
-st.markdown(f"""
-<div style="display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.8); padding: 10px 20px; border-bottom: 1px solid rgba(59, 130, 246, 0.2); margin-bottom: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
-    <div style="display: flex; gap: 20px; align-items: center;">
-        <span style="color: #3b82f6; font-weight: 800; font-family: 'JetBrains Mono';">{SVG_ICONS["Logo"]}</span>
-        <span class="label" style="color: #fff; cursor: pointer;">DASHBOARD</span>
-        <span class="label" style="cursor: pointer;">PORTFOLIO</span>
-        <span class="label" style="cursor: pointer;">SETTINGS</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 15px;">
-        <div class="live-dot"></div>
-        <span class="label" style="color: #10b981;">CORE_STABLE</span>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
 with st.sidebar:
     st.markdown(f'<div style="text-align:center; padding:1rem;">{SVG_ICONS["Logo"]}</div>', unsafe_allow_html=True)
     st.markdown("<h2 style='text-align:center; font-size:1.2rem;'>StockZ Terminal</h2>", unsafe_allow_html=True)
@@ -125,6 +113,18 @@ with st.sidebar:
     ticker = st.text_input("INSTRUMENT", value="AAPL").upper().strip()
     period = st.selectbox("HISTORY", options=["6mo", "1y", "2y", "5y"], index=1)
     risk_pct = st.slider("Risk Per Trade (%)", 0.5, 5.0, 1.0, 0.5)
+    
+    st.markdown("---")
+    
+    # Persistent Sidebar Wallet (Paper Money Display)
+    st.markdown(f'<div class="label">{SVG_ICONS["Wallet"]} ACCOUNT BALANCE</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="value mono" style="font-size:1.4rem; color:#10b981;">${st.session_state.cash_balance:,.2f}</div>', unsafe_allow_html=True)
+    
+    if st.session_state.portfolio:
+        st.markdown('<div class="label" style="margin-top:10px;">OPEN POSITIONS</div>', unsafe_allow_html=True)
+        for t, q in st.session_state.portfolio.items():
+            if q > 0:
+                st.markdown(f'<div class="mono" style="font-size:0.8rem; color:#60A5FA;">{t}: {q} Units</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     analyse = st.button("RUN ENGINE SCAN")
@@ -135,7 +135,7 @@ with st.sidebar:
 if not analyse and 'last_df' not in st.session_state:
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
-        st_lottie(lottie_scan, height=300, key="initial")
+        if lottie_scan: st_lottie(lottie_scan, height=300, key="initial")
         st.markdown("<p style='text-align:center; color:#64748b;' class='mono'>SYSTEM READY. AWAITING INPUT...</p>", unsafe_allow_html=True)
     st.stop()
 
@@ -154,19 +154,14 @@ latest_close = float(df["Close"].iloc[-1])
 daily_chg = (latest_close - float(df["Close"].iloc[-2])) / float(df["Close"].iloc[-2]) * 100
 primary = latest_patterns[0] if latest_patterns else None
 
-# Header
-st.markdown(f"""
-    <div style='margin-bottom:2rem;'>
-        <div class='label'><span class='live-dot'></span> {info['sector']} • LIVE FEED</div>
-        <div style='font-size:2.8rem; font-weight:800; letter-spacing:-0.02em;'>{info['name']} <span style='color:#3b82f6' class='mono'>{active_ticker}</span></div>
-    </div>
-""", unsafe_allow_html=True)
-
-# KPI Grid
+# KPI Grid - Including Dedicated Paper Money Card
 c1, c2, c3, c4 = st.columns(4)
-with c1: st.markdown(f'<div class="quant-card"><div class="label">Last Traded</div><div class="value mono">${latest_close:,.2f}</div></div>', unsafe_allow_html=True)
-with c2: st.markdown(f'<div class="quant-card"><div class="label">Session Change</div><div class="value mono" style="color:{"#10b981" if daily_chg >=0 else "#ef4444"}">{daily_chg:+.2f}%</div></div>', unsafe_allow_html=True)
-with c3: st.markdown(f'<div class="quant-card"><div class="label">Pattern Signal</div><div class="value" style="font-size:1.2rem; color:#3b82f6;">{primary if primary else "NEUTRAL"}</div></div>', unsafe_allow_html=True)
+with c1: 
+    st.markdown(f'<div class="quant-card"><div class="label">Last Price</div><div class="value mono">${latest_close:,.2f}</div></div>', unsafe_allow_html=True)
+with c2: 
+    st.markdown(f'<div class="quant-card"><div class="label">Paper Money (Cash)</div><div class="value mono" style="color:#10b981;">${st.session_state.cash_balance:,.2f}</div></div>', unsafe_allow_html=True)
+with c3: 
+    st.markdown(f'<div class="quant-card"><div class="label">Pattern Signal</div><div class="value" style="font-size:1.2rem; color:#3b82f6;">{primary if primary else "NEUTRAL"}</div></div>', unsafe_allow_html=True)
 with c4:
     total_val = st.session_state.cash_balance + sum([v * latest_close for v in st.session_state.portfolio.values()])
     st.markdown(f'<div class="quant-card"><div class="label">Total Equity</div><div class="value mono">${total_val:,.0f}</div></div>', unsafe_allow_html=True)
@@ -191,7 +186,7 @@ with trade_col1:
     with q_col2:
         st.markdown(f'<div class="label">Est. Cost</div><div class="value mono" style="font-size:1.4rem;">${qty * latest_close:,.2f}</div>', unsafe_allow_html=True)
     with q_col3:
-        st.markdown(f'<div class="label">Buying Power</div><div class="value mono" style="font-size:1.4rem;">${st.session_state.cash_balance:,.0f}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="label">Buying Power</div><div class="value mono" style="font-size:1.4rem; color:#10b981;">${st.session_state.cash_balance:,.0f}</div>', unsafe_allow_html=True)
     
     b_col1, b_col2 = st.columns(2)
     with b_col1:
@@ -201,6 +196,7 @@ with trade_col1:
                 st.session_state.cash_balance -= cost
                 st.session_state.portfolio[active_ticker] = st.session_state.portfolio.get(active_ticker, 0) + qty
                 st.success(f"Order Filled: +{qty} {active_ticker}")
+                time.sleep(1)
                 st.rerun()
             else:
                 st.error("Margin Insufficient")
@@ -210,6 +206,7 @@ with trade_col1:
                 st.session_state.cash_balance += (qty * latest_close)
                 st.session_state.portfolio[active_ticker] -= qty
                 st.warning(f"Order Filled: -{qty} {active_ticker}")
+                time.sleep(1)
                 st.rerun()
             else:
                 st.error("Position Size Mismatch")
@@ -238,15 +235,14 @@ for i, (name, stats) in enumerate(stats_all.items()):
         </div>
         """, unsafe_allow_html=True)
 
-st.markdown("<div style='height:40px;'></div>", unsafe_allow_html=True)
 with st.expander("SYSTEM PROTOCOLS & USER GUIDE"):
     g1, g2, g3 = st.columns(3)
     with g1:
         st.markdown(f"#### {SVG_ICONS['Shield']} Integrity")
-        st.write("Engine utilizes vectorized pattern matching with a 120-day historical window to filter signal noise.")
+        st.write("Engine utilizes vectorized pattern matching with a 120-day historical window.")
     with g2:
         st.markdown(f"#### {SVG_ICONS['Logo']} Deployment")
-        st.write("Trades are simulated via session-state memory. To clear portfolio data, refresh the browser session.")
+        st.write("Trades are simulated via session-state memory. Paper Money resets on browser refresh.")
     with g3:
         st.markdown(f"#### {SVG_ICONS['Info']} Risk Level")
-        st.write(f"Risk Profile: {risk_pct}%. Position sizing is calculated relative to total portfolio equity.")
+        st.write(f"Risk Profile: {risk_pct}%. Position sizing is relative to total equity.")
