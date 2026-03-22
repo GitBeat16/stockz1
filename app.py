@@ -170,8 +170,8 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Nav Button Logic (Placed right under the header)
-c1, c2, c3, c4 = st.columns([1, 1, 1, 5])
+# Nav Button Logic - Adjusted for horizontal alignment
+c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 3]) # Added more columns to prevent squishing
 with c1:
     if st.button("DASHBOARD", use_container_width=True):
         st.session_state.current_page = "DASHBOARD"
