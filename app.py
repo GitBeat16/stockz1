@@ -230,6 +230,64 @@ if st.session_state.current_page == "DASHBOARD":
     fig.update_layout(template="plotly_dark", height=450, margin=dict(l=0,r=0,t=0,b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
     st.plotly_chart(fig, use_container_width=True)
 
+    # ── RISK MANAGEMENT DASHBOARD SECTION ─────────────────────────────────────
+    st.markdown("<div style='margin-top:2rem;' class='label'>Quant Risk Metrics</div>", unsafe_allow_html=True)
+    r_col1, r_col2 = st.columns([1.5, 2.5])
+    
+    with r_col1:
+        # Calculate Volatility & VaR (Simplified)
+        returns = df['Close'].pct_change().dropna()
+        volatility = returns.std() * np.sqrt(252) * 100 # Annualized %
+        var_95 = np.percentile(returns, 5) * 100 # 95% Confidence VaR
+        
+        st.markdown('<div class="quant-card" style="height:330px; display:flex; flex-direction:column; justify-content:center;">', unsafe_allow_html=True)
+        st.markdown(f'<div class="label">{SVG_ICONS["Shield"]} Risk Exposure Gauge</div>', unsafe_allow_html=True)
+        
+        # Risk Gauge Chart
+        current_exposure = (sum([v * latest_close for v in st.session_state.portfolio.values()]) / total_val) * 100
+        fig_gauge = go.Figure(go.Indicator(
+            mode = "gauge+number",
+            value = current_exposure,
+            number = {'suffix': "%", 'font': {'family': "JetBrains Mono", 'color': "#f8fafc"}},
+            gauge = {
+                'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "#64748b"},
+                'bar': {'color': "#3b82f6"},
+                'bgcolor': "rgba(0,0,0,0)",
+                'borderwidth': 2,
+                'bordercolor': "rgba(255,255,255,0.1)",
+                'steps': [
+                    {'range': [0, 30], 'color': 'rgba(16, 185, 129, 0.2)'},
+                    {'range': [30, 70], 'color': 'rgba(245, 158, 11, 0.2)'},
+                    {'range': [70, 100], 'color': 'rgba(239, 68, 68, 0.2)'}],
+            }
+        ))
+        fig_gauge.update_layout(height=220, margin=dict(l=20,r=20,t=30,b=0), paper_bgcolor='rgba(0,0,0,0)')
+        st.plotly_chart(fig_gauge, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with r_col2:
+        st.markdown('<div class="quant-card" style="height:330px;">', unsafe_allow_html=True)
+        st.markdown(f'<div class="label">{SVG_ICONS["Info"]} Risk Analytics</div>', unsafe_allow_html=True)
+        st.write("")
+        ra_c1, ra_c2 = st.columns(2)
+        with ra_c1:
+            st.markdown(f'<div class="label">Annual Volatility</div><div class="value mono" style="color:#f59e0b;">{volatility:.2f}%</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="label" style="margin-top:20px;">Day VaR (95%)</div><div class="value mono" style="color:#ef4444;">{var_95:.2f}%</div>', unsafe_allow_html=True)
+        with ra_c2:
+            sharpe = (returns.mean() / returns.std()) * np.sqrt(252) if returns.std() != 0 else 0
+            st.markdown(f'<div class="label">Sharpe Ratio</div><div class="value mono" style="color:#3b82f6;">{sharpe:.2f}</div>', unsafe_allow_html=True)
+            max_drawdown = (df['Close'] / df['Close'].expanding().max() - 1).min() * 100
+            st.markdown(f'<div class="label" style="margin-top:20px;">Max Drawdown</div><div class="value mono">{max_drawdown:.2f}%</div>', unsafe_allow_html=True)
+        
+        st.markdown(f"""
+        <div style="background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; padding: 10px; margin-top: 20px;">
+            <p style="font-size: 0.75rem; color: #94a3b8; margin:0;"><b>Quant Note:</b> Current volatility is {'High' if volatility > 30 else 'Moderate' if volatility > 15 else 'Low'}. 
+            Suggested position size for {risk_pct}% risk: <b>{int((total_val * (risk_pct/100)) / (latest_close * 0.1))} units.</b></p>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── ORDER EXECUTION SECTION ──────────────────────────────────────────────
     st.markdown("<div style='margin-top:2rem;' class='label'>Order Execution Engine</div>", unsafe_allow_html=True)
     trade_col1, trade_col2 = st.columns([2, 1])
     with trade_col1:
@@ -324,7 +382,6 @@ elif st.session_state.current_page == "PORTFOLIO":
     if not st.session_state.trade_history:
         st.markdown("<p style='color:#64748b;' class='mono'>No trades executed in this session.</p>", unsafe_allow_html=True)
     else:
-        # Displaying history in reverse (newest first)
         for trade in reversed(st.session_state.trade_history):
             color = "#10b981" if trade['type'] == "BUY" else "#ef4444"
             st.markdown(f"""
