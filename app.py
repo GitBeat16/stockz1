@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import time
 import requests
+import pytz  # Added for IST support
 from streamlit_lottie import st_lottie
 from datetime import datetime
 
@@ -28,6 +29,11 @@ if 'trade_history' not in st.session_state:
     st.session_state.trade_history = []
 if 'current_page' not in st.session_state:
     st.session_state.current_page = "DASHBOARD"
+
+# Helper for IST Time
+def get_ist_time():
+    ist = pytz.timezone('Asia/Kolkata')
+    return datetime.now(ist).strftime("%H:%M:%S")
 
 def load_lottieurl(url: str):
     try:
@@ -159,7 +165,7 @@ st.markdown(f"""
         </div>
         <div style="display: flex; align-items: center; gap: 15px;">
             <div class="live-dot"></div>
-            <span class="label" style="color: #10b981;">CORE_STABLE</span>
+            <span class="label" style="color: #10b981;">CORE_STABLE (IST)</span>
         </div>
     </div>
 </div>
@@ -242,7 +248,7 @@ if st.session_state.current_page == "DASHBOARD":
                     st.session_state.cash_balance -= cost
                     st.session_state.portfolio[active_ticker] = st.session_state.portfolio.get(active_ticker, 0) + qty
                     st.session_state.trade_history.append({
-                        "time": datetime.now().strftime("%H:%M:%S"),
+                        "time": get_ist_time(),
                         "symbol": active_ticker,
                         "type": "BUY",
                         "qty": qty,
@@ -260,7 +266,7 @@ if st.session_state.current_page == "DASHBOARD":
                     st.session_state.cash_balance += (qty * latest_close)
                     st.session_state.portfolio[active_ticker] -= qty
                     st.session_state.trade_history.append({
-                        "time": datetime.now().strftime("%H:%M:%S"),
+                        "time": get_ist_time(),
                         "symbol": active_ticker,
                         "type": "SELL",
                         "qty": qty,
@@ -311,7 +317,7 @@ elif st.session_state.current_page == "PORTFOLIO":
     st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Trade History ─────────────────────────────────────────────────────
-    st.markdown("<div class='label' style='margin-top:2rem;'>Activity Log</div><h2 style='color:white;'>Trade History</h2>", unsafe_allow_html=True)
+    st.markdown("<div class='label' style='margin-top:2rem;'>Activity Log</div><h2 style='color:white;'>Trade History (IST)</h2>", unsafe_allow_html=True)
     st.markdown('<div class="quant-card">', unsafe_allow_html=True)
     st.markdown(f'<div class="label" style="margin-bottom:15px;">{SVG_ICONS["History"]} Recent Executions</div>', unsafe_allow_html=True)
     
