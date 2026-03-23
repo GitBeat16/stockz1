@@ -54,7 +54,8 @@ SVG_ICONS = {
     "Info": '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" cy="16" x2="12" y2="12"/><line x1="12" cy="8" x2="12.01" y2="8"/></svg>',
     "Settings": '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
     "History": '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-    "News": '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2"><path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10l4 4v10a2 2 0 0 1-2 2z"/><path d="M7 8h5"/><path d="M7 12h10"/><path d="M7 16h10"/></svg>'
+    "News": '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2"><path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10l4 4v10a2 2 0 0 1-2 2z"/><path d="M7 8h5"/><path d="M7 12h10"/><path d="M7 16h10"/></svg>',
+    "Compare": '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>'
 }
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -295,6 +296,67 @@ if st.session_state.current_page == "DASHBOARD":
         <b>Quant Recommendation:</b> Maintain position. { "Buy on dip" if avg_sent > 0.5 else "Reduce exposure" } suggested.
         </p>
         """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── BUDGET & COMPARISON SECTION ──────────────────────────────────────────
+    st.markdown("<div style='margin-top:2rem;' class='label'>Budget Suitability & Comparison</div>", unsafe_allow_html=True)
+    comp_col1, comp_col2 = st.columns([1, 2])
+    
+    with comp_col1:
+        st.markdown('<div class="quant-card" style="height:100%;">', unsafe_allow_html=True)
+        st.markdown(f'<div class="label">{SVG_ICONS["Compare"]} VS Sector Peer</div>', unsafe_allow_html=True)
+        comp_ticker = st.text_input("COMPARE WITH", value="MSFT" if active_ticker != "MSFT" else "GOOGL").upper()
+        if st.button("RUN COMPARATIVE ANALYSIS", use_container_width=True):
+            with st.spinner("Analyzing peer..."):
+                comp_df = load_stock_data(comp_ticker, period)
+                comp_close = float(comp_df["Close"].iloc[-1])
+                comp_stats = analyse_all_patterns(comp_df)
+                
+                # Suitability Logic
+                max_active = int(st.session_state.cash_balance // latest_close)
+                max_comp = int(st.session_state.cash_balance // comp_close)
+                
+                # Pick the winner based on Average Win Rate across all patterns
+                active_avg_win = sum([s['win_rate'] for s in stats_all.values()]) / len(stats_all) if stats_all else 0
+                comp_avg_win = sum([s['win_rate'] for s in comp_stats.values()]) / len(comp_stats) if comp_stats else 0
+                
+                winner = active_ticker if active_avg_win >= comp_avg_win else comp_ticker
+                
+                st.session_state.comp_data = {
+                    "winner": winner,
+                    "max_shares": {active_ticker: max_active, comp_ticker: max_comp},
+                    "win_rates": {active_ticker: active_avg_win, comp_ticker: comp_avg_win}
+                }
+
+        if 'comp_data' in st.session_state:
+            res = st.session_state.comp_data
+            st.markdown(f"""
+                <div style="margin-top:15px; padding:10px; background:rgba(16, 185, 129, 0.1); border-radius:8px; border:1px solid #10b981;">
+                    <div class="label" style="color:#10b981;">TERMINAL CHOICE</div>
+                    <div class="value" style="font-size:1.2rem;">{res['winner']}</div>
+                    <div style="font-size:0.75rem; color:#94a3b8;">Highest historical win rate for your capital.</div>
+                </div>
+            """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with comp_col2:
+        st.markdown('<div class="quant-card" style="height:100%;">', unsafe_allow_html=True)
+        if 'comp_data' in st.session_state:
+            res = st.session_state.comp_data
+            st.markdown('<div class="label">Affordability & Efficiency Breakdown</div>', unsafe_allow_html=True)
+            k1, k2 = st.columns(2)
+            with k1:
+                st.markdown(f'<div class="label" style="margin-top:10px;">Max Shares ({active_ticker})</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="value mono">{res["max_shares"][active_ticker]}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="label" style="margin-top:10px;">Avg Win Rate</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="value mono" style="color:#3b82f6;">{res["win_rates"][active_ticker]:.1f}%</div>', unsafe_allow_html=True)
+            with k2:
+                st.markdown(f'<div class="label" style="margin-top:10px;">Max Shares ({comp_ticker})</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="value mono">{res["max_shares"][comp_ticker]}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="label" style="margin-top:10px;">Avg Win Rate</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="value mono" style="color:#10b981;">{res["win_rates"][comp_ticker]:.1f}%</div>', unsafe_allow_html=True)
+        else:
+            st.info("Enter a ticker and click 'Run Comparative Analysis' to see which stock fits your $100k budget better.")
         st.markdown('</div>', unsafe_allow_html=True)
 
     # ── ORDER EXECUTION ENGINE ───────────────────────────────────────────────
