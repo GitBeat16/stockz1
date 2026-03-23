@@ -43,6 +43,7 @@ def load_lottieurl(url: str):
     except: return None
 
 lottie_scan = load_lottieurl("https://assets10.lottiefiles.com/packages/lf20_ghp9v062.json")
+lottie_ai = load_lottieurl("https://assets3.lottiefiles.com/packages/lf20_ntp99aba.json")
 
 # ════════════════════════════════════════════════════════════════════════════
 # 2. VECTOR ART REPOSITORY
@@ -55,6 +56,7 @@ SVG_ICONS = {
     "Settings": '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
     "History": '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
     "News": '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2"><path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10l4 4v10a2 2 0 0 1-2 2z"/><path d="M7 8h5"/><path d="M7 12h10"/><path d="M7 16h10"/></svg>',
+    "Brain": '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.73-2.73 2.5 2.5 0 0 1-.31-4.71 2.5 2.5 0 0 1 .41-4.5 2.5 2.5 0 0 1 5.09-1.5z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.73-2.73 2.5 2.5 0 0 0 .31-4.71 2.5 2.5 0 0 0-.41-4.5 2.5 2.5 0 0 0-5.09-1.5z"/></svg>',
     "Compare": '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>'
 }
 
@@ -79,6 +81,17 @@ st.markdown(f"""
     transition: all 0.3s ease;
     animation: fadeIn 0.8s ease-out;
     margin-bottom: 1rem;
+}}
+
+.ai-bubble {{
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 10px;
+    font-size: 0.85rem;
+    color: #e2e8f0;
+    line-height: 1.4;
 }}
 
 .news-item {{
@@ -144,6 +157,20 @@ with st.sidebar:
     period = st.selectbox("HISTORY", options=["6mo", "1y", "2y", "5y"], index=1)
     risk_pct = st.slider("Risk Per Trade (%)", 0.5, 5.0, 1.0, 0.5)
     
+    st.markdown("---")
+    
+    # ── AI ASSISTANT SIDEBAR COMPONENT ────────────────────────────────────────
+    st.markdown(f'<div class="label">{SVG_ICONS["Brain"]} COMMAND CENTER</div>', unsafe_allow_html=True)
+    with st.container():
+        st.markdown('<div class="ai-bubble">', unsafe_allow_html=True)
+        if 'last_ticker' in st.session_state:
+            curr = st.session_state.last_ticker
+            bal = st.session_state.cash_balance
+            st.write(f"Analyzing **{curr}**. You have **${bal:,.0f}** liquid. I suggest looking for pattern confirmations before executing high-risk trades.")
+        else:
+            st.write("Awaiting engine scan to provide tactical deployment advice.")
+        st.markdown('</div>', unsafe_allow_html=True)
+
     st.markdown("---")
     
     st.markdown(f'<div class="label">{SVG_ICONS["Wallet"]} PAPER BALANCE</div>', unsafe_allow_html=True)
@@ -264,7 +291,6 @@ if st.session_state.current_page == "DASHBOARD":
     with r_col2:
         st.markdown('<div class="quant-card" style="height:400px;">', unsafe_allow_html=True)
         st.markdown(f'<div class="label">{SVG_ICONS["News"]} News Sentiment</div>', unsafe_allow_html=True)
-        # Simulated Sentiment Engine for Ticker
         news_items = [
             {"title": f"{active_ticker} exceeds Q1 expectations", "sent": "BULLISH", "score": 0.8},
             {"title": "Sector regulation changes pending", "sent": "NEUTRAL", "score": 0.5},
@@ -272,7 +298,6 @@ if st.session_state.current_page == "DASHBOARD":
         ]
         avg_sent = sum([i['score'] for i in news_items]) / len(news_items)
         sent_color = "#10b981" if avg_sent > 0.6 else "#ef4444" if avg_sent < 0.4 else "#f59e0b"
-        
         st.markdown(f'<div style="font-size:1.2rem; font-weight:800; color:{sent_color}; margin:10px 0;">{ "POSITIVE" if avg_sent > 0.6 else "NEGATIVE" if avg_sent < 0.4 else "MIXED" } ({avg_sent*100:.0f}%)</div>', unsafe_allow_html=True)
         
         for item in news_items:
@@ -287,14 +312,16 @@ if st.session_state.current_page == "DASHBOARD":
 
     with r_col3:
         st.markdown('<div class="quant-card" style="height:400px;">', unsafe_allow_html=True)
-        st.markdown(f'<div class="label">{SVG_ICONS["Info"]} Reasoning</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="label">{SVG_ICONS["Brain"]} Terminal Intelligence</div>', unsafe_allow_html=True)
         st.write("")
+        # AI Logic based on volatility and balance
+        risk_status = "High" if volatility > 30 else "Moderate" if volatility > 15 else "Low"
         st.markdown(f"""
-        <p style="font-size:0.8rem; color:#94a3b8; line-height:1.5;">
-        <b>Technical:</b> {primary if primary else "No clear pattern"}. RSI at 42.1 (Neutral).<br><br>
-        <b>Sentiment:</b> News flow is currently <b>{ "Bullish" if avg_sent > 0.6 else "Bearish" if avg_sent < 0.4 else "Mixed" }</b>. Social mentions up 12%.<br><br>
-        <b>Quant Recommendation:</b> Maintain position. { "Buy on dip" if avg_sent > 0.5 else "Reduce exposure" } suggested.
-        </p>
+        <div class="ai-bubble" style="background:transparent; border:none; padding:0;">
+        <b>Risk Assessment:</b> {risk_status}<br><br>
+        <b>Affordability:</b> You can purchase up to {int(st.session_state.cash_balance // latest_close)} units of {active_ticker}.<br><br>
+        <b>Strategy:</b> { "Aggressive accumulation" if avg_sent > 0.6 and volatility < 25 else "Defensive positioning" if avg_sent < 0.4 else "Scaling in slowly" } is recommended for this asset profile.
+        </div>
         """, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -311,22 +338,12 @@ if st.session_state.current_page == "DASHBOARD":
                 comp_df = load_stock_data(comp_ticker, period)
                 comp_close = float(comp_df["Close"].iloc[-1])
                 comp_stats = analyse_all_patterns(comp_df)
-                
-                # Suitability Logic
                 max_active = int(st.session_state.cash_balance // latest_close)
                 max_comp = int(st.session_state.cash_balance // comp_close)
-                
-                # Pick the winner based on Average Win Rate across all patterns
                 active_avg_win = sum([s['win_rate'] for s in stats_all.values()]) / len(stats_all) if stats_all else 0
                 comp_avg_win = sum([s['win_rate'] for s in comp_stats.values()]) / len(comp_stats) if comp_stats else 0
-                
                 winner = active_ticker if active_avg_win >= comp_avg_win else comp_ticker
-                
-                st.session_state.comp_data = {
-                    "winner": winner,
-                    "max_shares": {active_ticker: max_active, comp_ticker: max_comp},
-                    "win_rates": {active_ticker: active_avg_win, comp_ticker: comp_avg_win}
-                }
+                st.session_state.comp_data = {"winner": winner, "max_shares": {active_ticker: max_active, comp_ticker: max_comp}, "win_rates": {active_ticker: active_avg_win, comp_ticker: comp_avg_win}}
 
         if 'comp_data' in st.session_state:
             res = st.session_state.comp_data
@@ -334,7 +351,6 @@ if st.session_state.current_page == "DASHBOARD":
                 <div style="margin-top:15px; padding:10px; background:rgba(16, 185, 129, 0.1); border-radius:8px; border:1px solid #10b981;">
                     <div class="label" style="color:#10b981;">TERMINAL CHOICE</div>
                     <div class="value" style="font-size:1.2rem;">{res['winner']}</div>
-                    <div style="font-size:0.75rem; color:#94a3b8;">Highest historical win rate for your capital.</div>
                 </div>
             """, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
@@ -346,17 +362,13 @@ if st.session_state.current_page == "DASHBOARD":
             st.markdown('<div class="label">Affordability & Efficiency Breakdown</div>', unsafe_allow_html=True)
             k1, k2 = st.columns(2)
             with k1:
-                st.markdown(f'<div class="label" style="margin-top:10px;">Max Shares ({active_ticker})</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="value mono">{res["max_shares"][active_ticker]}</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="label" style="margin-top:10px;">Avg Win Rate</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="value mono" style="color:#3b82f6;">{res["win_rates"][active_ticker]:.1f}%</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="label" style="margin-top:10px;">Max Shares ({active_ticker})</div><div class="value mono">{res["max_shares"][active_ticker]}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="label" style="margin-top:10px;">Avg Win Rate</div><div class="value mono" style="color:#3b82f6;">{res["win_rates"][active_ticker]:.1f}%</div>', unsafe_allow_html=True)
             with k2:
-                st.markdown(f'<div class="label" style="margin-top:10px;">Max Shares ({comp_ticker})</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="value mono">{res["max_shares"][comp_ticker]}</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="label" style="margin-top:10px;">Avg Win Rate</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="value mono" style="color:#10b981;">{res["win_rates"][comp_ticker]:.1f}%</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="label" style="margin-top:10px;">Max Shares ({comp_ticker})</div><div class="value mono">{res["max_shares"][comp_ticker]}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="label" style="margin-top:10px;">Avg Win Rate</div><div class="value mono" style="color:#10b981;">{res["win_rates"][comp_ticker]:.1f}%</div>', unsafe_allow_html=True)
         else:
-            st.info("Enter a ticker and click 'Run Comparative Analysis' to see which stock fits your $100k budget better.")
+            st.info("Compare peers to see budget efficiency.")
         st.markdown('</div>', unsafe_allow_html=True)
 
     # ── ORDER EXECUTION ENGINE ───────────────────────────────────────────────
