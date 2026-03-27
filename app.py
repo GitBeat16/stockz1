@@ -12,7 +12,7 @@ from datetime import datetime
 # ── Backend imports ──────────────────────────────────────────────────────────
 try:
     from data_loader    import load_stock_data, get_ticker_info
-    from pattern_detector import get_latest_patterns
+    from pattern_detector import get_latest_patterns, detect_all_patterns
     from pattern_analysis import analyse_all_patterns
 except ImportError:
     st.error("Backend modules missing. Please ensure data_loader, pattern_detector, and pattern_analysis are in the root.")
@@ -20,7 +20,7 @@ except ImportError:
 # ════════════════════════════════════════════════════════════════════════════
 # 1. PAGE CONFIG & SESSION STATE
 # ════════════════════════════════════════════════════════════════════════════
-st.set_page_config(page_title="Terminal | AI Pattern Analyzer", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Terminal | Multi-Fractal Analyzer", layout="wide", initial_sidebar_state="expanded")
 
 if 'last_df' not in st.session_state:
     st.session_state.last_df = None
@@ -80,23 +80,20 @@ with st.sidebar:
     period = st.selectbox("LOOKBACK", options=["6mo", "1y", "2y", "5y"], index=1)
     st.markdown("---")
     st.markdown(f'<div class="label">{SVG_ICONS["Brain"]} SYSTEM STATUS</div>', unsafe_allow_html=True)
-    st.markdown('<div class="ai-bubble">Terminal calibrated. Monitoring live liquidity and news flow.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ai-bubble">Multi-Fractal Overlays Enabled. Scoping for Reversals.</div>', unsafe_allow_html=True)
     st.markdown("---")
     analyse = st.button("EXECUTE ANALYSIS", use_container_width=True)
 
 # ════════════════════════════════════════════════════════════════════════════
-# 5. LIVE SENTIMENT CORE
+# 5. LIVE DATA HELPERS
 # ════════════════════════════════════════════════════════════════════════════
 def get_live_sentiment(ticker_symbol):
     try:
         search = yf.Search(ticker_symbol, news_count=5)
         news = search.news
-        if not news: return [], 50 # Default Neutral
-        
-        # Simple keywords for scoring (since we avoid heavy NLP libs for speed)
+        if not news: return [], 50
         bullish_terms = ["surge", "buy", "growth", "high", "positive", "profit", "gain", "upgrade", "outperform"]
         bearish_terms = ["drop", "sell", "fall", "low", "negative", "loss", "risk", "downgrade", "underperform"]
-        
         score = 50
         processed_news = []
         for n in news:
@@ -109,13 +106,12 @@ def get_live_sentiment(ticker_symbol):
                 score -= 8
                 sent = "BEARISH"
             processed_news.append({"h": n.get('title')[:60] + "...", "s": sent})
-            
         return processed_news, min(max(score, 10), 90)
     except:
-        return [{"h": "News feed currently restricted", "s": "N/A"}], 50
+        return [{"h": "News feed restricted", "s": "N/A"}], 50
 
 # ════════════════════════════════════════════════════════════════════════════
-# 6. ROUTER & VALIDATION
+# 6. ROUTER & VALIDATION GATE
 # ════════════════════════════════════════════════════════════════════════════
 if not analyse and st.session_state.last_df is None:
     col1, col2, col3 = st.columns([1,2,1])
@@ -128,7 +124,7 @@ if analyse:
     with st.spinner("Decoding Market Fractals..."):
         df = load_stock_data(ticker, period)
         if df is None or df.empty or "Open" not in df.columns:
-            st.error(f"DATA_FAILURE: Symbol '{ticker}' returned no data. Check ticker and retry.")
+            st.error(f"DATA_FAILURE: Symbol '{ticker}' returned no data.")
             st.stop()
         
         info = get_ticker_info(ticker)
@@ -147,69 +143,87 @@ news_items = st.session_state.last_news
 sentiment_score = st.session_state.last_sent_score
 
 stats_all = analyse_all_patterns(df)
-latest_patterns = get_latest_patterns(df)
+all_fired = detect_all_patterns(df) 
 latest_close = float(df["Close"].iloc[-1])
-primary_pattern = latest_patterns[0] if latest_patterns else "STABLE CONSOLIDATION"
 
 # ── DASHBOARD UI ─────────────────────────────────────────────────────────────
-st.markdown(f"""
-    <div style='margin-bottom:2rem;'>
-        <div class='label'><span class='live-dot'></span> {info['sector']} • LIVE FEED (IST: {get_ist_time()})</div>
-        <div style='font-size:2.8rem; font-weight:800; letter-spacing:-0.02em;'>{info['name']} <span style='color:#3b82f6' class='mono'>{active_ticker}</span></div>
-    </div>
-""", unsafe_allow_html=True)
+st.markdown(f"<div style='margin-bottom:2rem;'><div class='label'><span class='live-dot'></span> {info['sector']} • LIVE FEED</div><div style='font-size:2.8rem; font-weight:800;'>{info['name']} <span style='color:#3b82f6' class='mono'>{active_ticker}</span></div></div>", unsafe_allow_html=True)
 
 c1, c2, c3, c4 = st.columns(4)
 with c1: st.markdown(f'<div class="quant-card"><div class="label">Last Price</div><div class="value mono">${latest_close:,.2f}</div></div>', unsafe_allow_html=True)
 with c2: 
     change = df['Close'].pct_change().iloc[-1] * 100
-    color = "#10b981" if change >= 0 else "#ef4444"
-    st.markdown(f'<div class="quant-card"><div class="label">24H Change</div><div class="value mono" style="color:{color};">{change:+.2f}%</div></div>', unsafe_allow_html=True)
-with c3: st.markdown(f'<div class="quant-card"><div class="label">Dominant Signal</div><div class="value" style="font-size:1.2rem; color:#3b82f6;">{primary_pattern}</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="quant-card"><div class="label">24H Change</div><div class="value mono" style="color:{"#10b981" if change >= 0 else "#ef4444"};">{change:+.2f}%</div></div>', unsafe_allow_html=True)
+with c3: 
+    active_sigs = [p for p, fired in all_fired.items() if fired.iloc[-1]]
+    top_sig = active_sigs[0] if active_sigs else "STABLE"
+    st.markdown(f'<div class="quant-card"><div class="label">Active Pattern</div><div class="value" style="font-size:1.2rem; color:#3b82f6;">{top_sig}</div></div>', unsafe_allow_html=True)
 with c4:
     vol = df['Close'].pct_change().std() * np.sqrt(252) * 100
     st.markdown(f'<div class="quant-card"><div class="label">Volatility (Annu)</div><div class="value mono">{vol:.1f}%</div></div>', unsafe_allow_html=True)
 
-fig = go.Figure(data=[go.Candlestick(x=df.tail(120).index, open=df.tail(120)['Open'], high=df.tail(120)['High'], low=df.tail(120)['Low'], close=df.tail(120)['Close'], increasing_line_color='#10b981', decreasing_line_color='#ef4444')])
-fig.update_layout(template="plotly_dark", height=450, margin=dict(l=0,r=0,t=0,b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+# ── MULTI-FRACTAL CHART ──────────────────────────────────────────────────────
+df_plot = df.tail(120)
+fig = go.Figure(data=[go.Candlestick(x=df_plot.index, open=df_plot['Open'], high=df_plot['High'], low=df_plot['Low'], close=df_plot['Close'], increasing_line_color='#10b981', decreasing_line_color='#ef4444', name="Price")])
+
+# Map of Emojis/Colors for different patterns
+PATTERN_META = {
+    "Hammer": {"emoji": "🔨", "color": "#10b981"},
+    "Doji": {"emoji": "⚖️", "color": "#60a5fa"},
+    "Bullish Engulfing": {"emoji": "🔥", "color": "#34d399"},
+    "Bearish Engulfing": {"emoji": "💀", "color": "#ef4444"},
+    "Shooting Star": {"emoji": "🌠", "color": "#f59e0b"}
+}
+
+# Overlay all detected fractals
+for pattern_name, meta in PATTERN_META.items():
+    if pattern_name in all_fired:
+        points = df_plot[all_fired[pattern_name].tail(120)]
+        if not points.empty:
+            fig.add_trace(go.Scatter(
+                x=points.index, 
+                y=points['Low'] * 0.995, 
+                mode='text+markers',
+                text=[meta["emoji"]] * len(points),
+                textposition="bottom center",
+                marker=dict(size=12, color=meta["color"], symbol="circle-open"),
+                name=pattern_name
+            ))
+
+fig.update_layout(template="plotly_dark", height=500, margin=dict(l=0,r=0,t=0,b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
 st.plotly_chart(fig, use_container_width=True)
 
+# ── ANALYTICS PANELS ─────────────────────────────────────────────────────────
 r_col1, r_col2, r_col3 = st.columns([1.2, 1.4, 1.4])
 
 with r_col1:
     st.markdown('<div class="quant-card" style="height:450px;">', unsafe_allow_html=True)
-    st.markdown(f'<div class="label">{SVG_ICONS["Shield"]} Pattern Reliability</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="label">{SVG_ICONS["Shield"]} Technical Reliability</div>', unsafe_allow_html=True)
     avg_win = sum([s['win_rate'] for s in stats_all.values()]) / len(stats_all) if stats_all else 50
     fig_gauge = go.Figure(go.Indicator(mode = "gauge+number", value = avg_win, number = {'suffix': "%", 'font': {'family': "JetBrains Mono", 'color': "#f8fafc", 'size': 24}},
         gauge = {'axis': {'range': [0, 100]}, 'bar': {'color': "#3b82f6"}, 'bgcolor': "rgba(0,0,0,0)"}))
     fig_gauge.update_layout(height=220, margin=dict(l=10,r=10,t=40,b=0), paper_bgcolor='rgba(0,0,0,0)')
     st.plotly_chart(fig_gauge, use_container_width=True)
-    st.markdown(f'<div class="ai-bubble" style="text-align:center;">Backtest Accuracy: <b>{avg_win:.1f}%</b></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="ai-bubble" style="text-align:center;">Pattern Fidelity: <b>{avg_win:.1f}%</b></div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 with r_col2:
     st.markdown('<div class="quant-card" style="height:450px;">', unsafe_allow_html=True)
     st.markdown(f'<div class="label">{SVG_ICONS["News"]} Live {active_ticker} Sentiment</div>', unsafe_allow_html=True)
     s_label = "BULLISH FLOW" if sentiment_score > 55 else "BEARISH FLOW" if sentiment_score < 45 else "NEUTRAL BIAS"
-    s_color = "#10b981" if sentiment_score > 55 else "#ef4444" if sentiment_score < 45 else "#64748b"
-    st.markdown(f'<div style="font-size:1.4rem; font-weight:800; color:{s_color}; margin:15px 0;">{s_label}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="font-size:1.4rem; font-weight:800; color:{"#10b981" if sentiment_score > 55 else "#ef4444"}; margin:15px 0;">{s_label}</div>', unsafe_allow_html=True)
     for item in news_items:
         st.markdown(f'<div class="news-item"><div style="font-size:0.75rem; color:#f8fafc;">{item["h"]}</div><div class="mono" style="font-size:0.6rem; color:#3b82f6;">{item["s"]}</div></div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 with r_col3:
     st.markdown('<div class="quant-card" style="height:450px;">', unsafe_allow_html=True)
-    st.markdown(f'<div class="label">{SVG_ICONS["Brain"]} AI Context</div>', unsafe_allow_html=True)
-    st.markdown(f"""<div class="ai-bubble">
-    <b>Market Mood:</b> The {s_label.lower()} reflects active news headlines.<br><br>
-    <b>Fractal State:</b> {primary_pattern} confirmed on the {period} timeframe.<br><br>
-    <b>Volatility:</b> {vol:.1f}% indicates {"high risk" if vol > 30 else "moderate risk" if vol > 15 else "low risk"} profile.
-    </div>""", unsafe_allow_html=True)
-    st.markdown(f'<div class="label" style="margin-top:20px;">Trend Strength</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="label">{SVG_ICONS["Brain"]} Terminal AI</div>', unsafe_allow_html=True)
+    st.markdown(f"""<div class="ai-bubble"><b>Fractal Engine:</b> Monitoring {len(PATTERN_META)} pattern types. Icons on the chart mark verified signals.<br><br><b>Consensus:</b> {top_sig if active_sigs else "No active signal"}.<br><br><b>Risk Status:</b> {vol:.1f}% volatility indicates an {"unstable" if vol > 30 else "orderly"} market.</div>""", unsafe_allow_html=True)
     st.progress(min(max(sentiment_score/100, 0.0), 1.0))
     st.markdown('</div>', unsafe_allow_html=True)
 
-st.markdown("<div style='margin-top:2rem;' class='label'>Historical Performance Matrix</div>", unsafe_allow_html=True)
+st.markdown("<div style='margin-top:2rem;' class='label'>Historical Backtest Data</div>", unsafe_allow_html=True)
 cols = st.columns(len(stats_all))
 for i, (name, stats) in enumerate(stats_all.items()):
     with cols[i]:
